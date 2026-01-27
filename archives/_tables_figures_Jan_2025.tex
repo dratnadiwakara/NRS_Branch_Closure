@@ -1,0 +1,760 @@
+\newcommand{\sigtextable}{Standard errors (reported in parentheses) are clustered at the bank level. We use *,**, and *** to denote statistical significance at the 10\%, 5\%, and 1\% levels, respectively.}
+
+\clearpage
+\begin{figure}
+    \centering
+    \adddescription{
+    \small
+This figure shows the total number of banks (blue line, left axis) and the total number of bank offices (orange line, right axis) in the United States from 1934 to 2023. 
+    }
+    \includegraphics[width=\textwidth]{resources/figures/old/bank_branch_line_plot.jpg}
+    \caption{Total Number of Banks and Bank Offices, 1934-2023}
+    \label{fig:no_of_banks_branches}
+\end{figure}
+
+
+
+\clearpage
+\begin{figure}
+    \centering
+    \adddescription{
+    \small
+This figure displays the annual percentage of branches closed by small banks ($<$100bn in assets, orange bars) and large banks ($>=$100bn in assets, blue bars) from 2015 to 2023. The x-axis represents the years, while the y-axis shows the percentage of branches closed.
+    }
+    \includegraphics[width=\textwidth]{resources/figures/old/pct_branches_closed.jpg}
+    \caption{Percent of Branches Closed}
+    \label{fig:pct_branches_closed}
+\end{figure}
+
+
+\clearpage
+\begin{table}[]
+    \centering
+    \adddescription{
+    \small
+This table presents summary statistics for the bank-level samples during two interest rate cycles, separated for large banks ($>$100 billion in assets) and small banks. Panels A and B correspond to the late interest rate cycle, while Panels C and D correspond to the early cycle. For each group, statistics include the mean, standard deviation (SD), and selected percentiles (P10, P25, P50, P75, P90) for variables such as deposit beta, age, college-educated fraction, stock market participation fraction, family income, fraction of deposits in sophisticated zip codes, Herfindahl-Hirschman Index (HHI), and deposit-weighted population density. Observations are noted for each variable within the respective samples.
+    }
+    \vspace{0.5cm}
+    {\small Panel A: Large Banks (Late Cycle)}
+    \resizebox{0.8\textwidth}{!}{
+        \begin{tabular}{lrrrrrrrr}
+          \hline
+        Variable & Obs & Mean & SD & P10 & P25 & P50 & P75 & P90 \\ 
+          \hline
+Deposit beta &  22 & 0.36 & 0.15 & 0.22 & 0.26 & 0.31 & 0.48 & 0.60 \\ 
+  Age &  22 & 37.55 & 2.26 & 34.45 & 36.44 & 37.99 & 39.02 & 39.43 \\ 
+  College educated fraction &  22 & 0.52 & 0.17 & 0.38 & 0.43 & 0.48 & 0.58 & 0.75 \\ 
+  Stock market participation frac &  22 & 0.28 & 0.10 & 0.16 & 0.23 & 0.27 & 0.33 & 0.39 \\ 
+  Family income (000) &  22 & 80.77 & 34.28 & 56.60 & 63.50 & 71.00 & 85.25 & 102.20 \\ 
+  Frac. deposits in sophisticated zipcodes &  22 & 0.61 & 0.30 & 0.04 & 0.49 & 0.69 & 0.84 & 0.91 \\ 
+  HHI &  22 & 0.28 & 0.18 & 0.14 & 0.19 & 0.22 & 0.29 & 0.40 \\ 
+  Deposit-weighted Pop. density &  22 & 0.29 & 0.07 & 0.20 & 0.27 & 0.31 & 0.35 & 0.36 \\ 
+           \hline
+        \end{tabular}
+        }
+    \\
+    \vspace{0.5cm}
+{\small Panel B: Small Banks (Late Cycle)}
+
+    \resizebox{0.8\textwidth}{!}{
+    \begin{tabular}{lrrrrrrrr}
+      \hline
+    Variable & Obs & Mean & SD & P10 & P25 & P50 & P75 & P90 \\ 
+      \hline
+Deposit beta & 4285 & 0.18 & 0.12 & 0.04 & 0.09 & 0.16 & 0.25 & 0.35 \\ 
+  Age & 4285 & 40.78 & 4.41 & 35.59 & 38.09 & 40.71 & 43.26 & 45.86 \\ 
+  College educated fraction & 4285 & 0.29 & 0.14 & 0.15 & 0.19 & 0.25 & 0.34 & 0.48 \\ 
+  Stock market participation frac & 4285 & 0.20 & 0.08 & 0.10 & 0.14 & 0.19 & 0.24 & 0.29 \\ 
+  Family income (000) & 4285 & 57.74 & 18.27 & 39.00 & 46.00 & 54.00 & 65.00 & 80.00 \\ 
+  Frac. deposits in sophisticated zipcodes & 4285 & 0.34 & 0.39 & 0.00 & 0.00 & 0.15 & 0.71 & 1.00 \\ 
+  HHI & 4285 & 0.24 & 0.13 & 0.11 & 0.15 & 0.21 & 0.29 & 0.40 \\ 
+  Deposit-weighted Pop. density & 4285 & 0.10 & 0.12 & 0.01 & 0.01 & 0.04 & 0.14 & 0.36 \\ 
+       \hline
+    \end{tabular}
+    }
+
+\vspace{0.5cm}
+{\small Panel C: Large Banks (Early Cycle)}
+
+    \resizebox{0.8\textwidth}{!}{
+    \begin{tabular}{lrrrrrrrr}
+      \hline
+    Variable & Obs & Mean & SD & P10 & P25 & P50 & P75 & P90 \\ 
+      \hline
+Deposit beta &  26 & 0.25 & 0.10 & 0.15 & 0.20 & 0.22 & 0.29 & 0.40 \\ 
+  Age &  26 & 37.86 & 2.83 & 34.32 & 36.44 & 37.99 & 39.14 & 41.18 \\ 
+  College educated fraction &  26 & 0.54 & 0.16 & 0.39 & 0.44 & 0.53 & 0.62 & 0.76 \\ 
+  Stock market participation frac &  26 & 0.30 & 0.12 & 0.17 & 0.23 & 0.28 & 0.35 & 0.43 \\ 
+  Family income (000) &  26 & 84.42 & 33.64 & 59.00 & 65.25 & 73.00 & 94.50 & 115.00 \\ 
+  Frac. deposits in sophisticated zipcodes &  26 & 0.64 & 0.30 & 0.18 & 0.49 & 0.71 & 0.85 & 0.96 \\ 
+  HHI &  26 & 0.27 & 0.20 & 0.13 & 0.18 & 0.21 & 0.25 & 0.49 \\ 
+  Deposit-weighted Pop. density &  26 & 0.30 & 0.07 & 0.21 & 0.29 & 0.32 & 0.36 & 0.36 \\ 
+       \hline
+    \end{tabular}
+}
+
+\vspace{0.5cm}
+{\small Panel D: Small Banks (Early Cycle)}
+    \resizebox{0.8\textwidth}{!}{
+    \begin{tabular}{lrrrrrrrr}
+      \hline
+        Variable & Obs & Mean & SD & P10 & P25 & P50 & P75 & P90 \\ 
+      \hline
+Deposit beta & 4880 & 0.17 & 0.12 & 0.02 & 0.08 & 0.15 & 0.25 & 0.34 \\ 
+  Age & 4880 & 40.76 & 4.47 & 35.56 & 38.10 & 40.66 & 43.23 & 45.86 \\ 
+  College educated fraction & 4880 & 0.29 & 0.14 & 0.16 & 0.19 & 0.25 & 0.36 & 0.50 \\ 
+  Stock market participation frac & 4880 & 0.20 & 0.09 & 0.10 & 0.14 & 0.19 & 0.24 & 0.30 \\ 
+  Family income (000) & 4880 & 58.60 & 18.94 & 39.00 & 46.00 & 55.00 & 66.00 & 83.00 \\ 
+  Frac. deposits in sophisticated zipcodes & 4880 & 0.36 & 0.40 & 0.00 & 0.00 & 0.17 & 0.75 & 1.00 \\ 
+  HHI & 4880 & 0.23 & 0.13 & 0.11 & 0.14 & 0.20 & 0.28 & 0.38 \\ 
+  Deposit-weighted Pop. density & 4880 & 0.11 & 0.13 & 0.01 & 0.01 & 0.04 & 0.16 & 0.36 \\ 
+       \hline
+    \end{tabular}
+    }
+
+    
+    \caption{Descriptive Statistics - Bank Level}
+    \label{table1}
+\end{table}
+
+
+
+
+\begin{table}[]
+    \centering
+    \adddescription{
+    \small
+This table presents estimates of deposit beta from Equation (2) for two interest rate cycles: 2016–2019 (columns 1 and 3) and 2022–2024 (columns 2 and 4). Columns 1 and 2 report detailed specifications with individual demographic variables, including age (quartiles), income, stock market participation, college education, Herfindahl-Hirschman Index (HHI), and deposit-weighted population density. Columns 3 and 4 present a parsimonious specification, collapsing demographic measures into the fraction of deposits in sophisticated zip codes. The dependent variable in all columns is deposit beta. \sigtextable
+    }
+
+    \resizebox{\textwidth}{!}{
+    \begin{tabular}{@{\extracolsep{5pt}}lcccc} 
+    \\[-1.8ex]\hline 
+    \hline \\[-1.8ex] 
+     & \multicolumn{4}{c}{Deposit Beta} \\ 
+    \cline{2-5} 
+     & 2016-2019 & 2022-2024 & 2016-2019 & 2022-2024 \\ 
+    \\[-1.8ex] & (1) & (2) & (3) & (4)\\ 
+    \hline \\[-1.8ex] 
+ Frac. deposits in sophisticated zipcodes &  &  & 0.0214$^{***}$ & 0.0194$^{***}$ \\ 
+  &  &  & (0.0049) & (0.0049) \\ 
+  Age Q1-Q2 & 0.0020 & $-$0.0046 & $-$0.0001 & $-$0.0066 \\ 
+  & (0.0045) & (0.0045) & (0.0044) & (0.0045) \\ 
+  Age Q2-Q3 & 0.0037 & $-$0.0043 & 0.0026 & $-$0.0051 \\ 
+  & (0.0051) & (0.0052) & (0.0049) & (0.0049) \\ 
+  Age $>$ Q3 & $-$0.0139$^{**}$ & $-$0.0251$^{***}$ & $-$0.0108 & $-$0.0220$^{***}$ \\ 
+  & (0.0071) & (0.0072) & (0.0067) & (0.0068) \\ 
+  log(Income) & $-$0.0290$^{***}$ & $-$0.0236$^{**}$ &  &  \\ 
+  & (0.0061) & (0.0099) &  &  \\ 
+  Stock market participation frac & 0.0626$^{*}$ & 0.0474 &  &  \\ 
+  & (0.0337) & (0.0367) &  &  \\ 
+  College educated fraction & 0.1387$^{***}$ & 0.1365$^{***}$ &  &  \\ 
+  & (0.0251) & (0.0265) &  &  \\ 
+  HHI & $-$0.0238$^{*}$ & $-$0.0136 & $-$0.0204 & $-$0.0122 \\ 
+  & (0.0138) & (0.0138) & (0.0139) & (0.0137) \\ 
+  log(Assets) & 0.0052$^{***}$ & 0.0154$^{***}$ & 0.0068$^{***}$ & 0.0170$^{***}$ \\ 
+  & (0.0014) & (0.0014) & (0.0014) & (0.0013) \\ 
+  Deposit-weighted Pop. Density & 0.0721$^{***}$ & 0.1143$^{***}$ & 0.1278$^{***}$ & 0.1725$^{***}$ \\ 
+  & (0.0210) & (0.0215) & (0.0174) & (0.0178) \\ 
+  Transaction deposits/Assets & $-$0.1173$^{***}$ & $-$0.1114$^{***}$ & $-$0.1201$^{***}$ & $-$0.1134$^{***}$ \\ 
+  & (0.0209) & (0.0200) & (0.0211) & (0.0201) \\ 
+  Constant & 0.3818$^{***}$ & 0.2099$^{**}$ & 0.0848$^{***}$ & $-$0.0301$^{*}$ \\ 
+  & (0.0665) & (0.1062) & (0.0179) & (0.0178) \\ 
+ \hline \\[-1.8ex] 
+Observations & 4,906 & 4,306 & 4,906 & 4,306 \\ 
+R$^{2}$ & 0.0893 & 0.1744 & 0.0775 & 0.1657 \\ 
+    \hline 
+    \hline \\[-1.8ex] 
+    \textit{Note:}  & \multicolumn{4}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+    \end{tabular}
+    }
+    \caption{Bank-Level Deposit Beta}
+    \label{table2}
+\end{table}
+
+
+
+\clearpage
+\begin{figure}
+    \centering
+    \adddescription{
+    \small
+This figure illustrates the relationship between the percentage of branches closed (y-axis) and the decile of predicted branch-level deposit franchise (DF) values in Panel A, as well as bank-level deposit franchise (DF) values (x-axis) in Panel B. The data is presented for two distinct interest rate hike cycles: 2016-2019 (represented by orange circles) and 2022-2024 (represented by blue triangles). Each decile corresponds to a grouping of branches in Panel A and banks in Panel B based on their DF values, with lower deciles indicating branches and banks with lower DF values. 
+    }
+    Panel A: Branch-Level\\
+    \includegraphics[width=0.8\textwidth]{resources/figures/old/df_bin_pct_closed.jpg}
+    \vspace{0.5cm}\\
+    Panel B: Bank-Level\\
+        \includegraphics[width=0.8\textwidth]{resources/figures/old/df_bin_pct_closed_bank.jpg}
+    \caption{Deposit Franchise and Branch Closure}
+    \label{fig:pct_closed_df_bin}
+\end{figure}
+
+
+
+
+\clearpage
+\begin{figure}
+    \centering
+    \adddescription{
+    \small
+Panel A of this figure illustrates density plots of the predicted deposit beta (DF) at the branch level, segmented by year (2015--2023) and bank size. Panel B presents analogous density plots using bank-level data. In both panels, small banks (with assets under \$100 billion) are represented by orange distributions, while large banks (with assets over \$100 billion) are depicted by blue distributions. 
+    }
+     Panel A: Branch-Level\\
+    \includegraphics[width=\textwidth]{resources/figures/old/df_density.jpg}
+        \vspace{0.5cm}\\
+    Panel B: Bank-Level\\
+    \includegraphics[width=0.6\textwidth]{resources/figures/old/df_density_bank.jpg}
+    \caption{Deposit Franchise Value per Dollar of Deposits}
+    \label{fig:df_density}
+\end{figure}
+
+
+
+
+\clearpage
+\begin{figure}
+    \centering
+    \adddescription{
+    \small
+This scatter plot compares deposit franchise (DF) per dollar between the early cycle (2016–2019) and the late cycle (2022–2024) for small banks ($<$100bn in assets, orange points) and large banks ($>$100bn in assets, blue points). Panel A uses branch-level observations and Panel B uses bank-level observations. The x-axis represents DF per dollar in the early cycle, while the y-axis represents DF per dollar in the late cycle. The solid line represents the fitted relationship, and the dashed line indicates the 45-degree line, serving as a reference for equal DF values between the two periods. Each point corresponds to a bank-branch observation.
+    }
+    Panel A: Branch-Level\\
+    \includegraphics[width=0.6\textwidth]{resources/figures/old/df_scatter.jpg}
+            \vspace{0.5cm}\\
+    Panel B: Bank-Level\\
+    \includegraphics[width=0.6\textwidth]{resources/figures/old/df_scatter_bank.jpg}
+    \caption{Deposit Franchise per Dollar: Early vs. Late Cycle}
+    \label{fig:df_scatter}
+\end{figure}
+
+
+\clearpage
+\begin{table}[]
+    \centering
+    \adddescription{
+\small
+This table presents the estimates from Equation (3), analyzing branch usage and the distance customers travel to branches, split by bank size (large or small). Panel A reports results using a parsimonious model with a single sophisticated zip code indicator, while Panel B uses separate demographic variables, including age quartiles, income, education, and stock market participation. Columns 1 and 2 in both panels analyze branch usage, measured as the log of visitors per million deposits, while columns 3 and 4 examine the log of distance (in kilometers) customers travel. Results are reported separately for large and small banks, with controls for bank-year and state-year fixed effects. \sigtextable
+
+    }
+\vspace{0.5cm}
+{\small Panel A}\\
+    \resizebox{0.6\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lcccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+%  & \multicolumn{4}{c}{\textit{Dependent variable:}} \\ 
+% \cline{2-5} 
+ & \multicolumn{2}{c}{log(vistors per 1m deposits)} & \multicolumn{2}{c}{log(distance km)} \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4)\\ 
+\hline \\[-1.8ex] 
+ Sophisticated zipcode & $-$0.136$^{***}$ & $-$0.083$^{***}$ & 0.119$^{***}$ & 0.125$^{***}$ \\ 
+  & (0.046) & (0.017) & (0.016) & (0.014) \\ 
+  Age Q1-Q2 & $-$0.029 & $-$0.046$^{***}$ & $-$0.116$^{***}$ & $-$0.107$^{***}$ \\ 
+  & (0.025) & (0.018) & (0.013) & (0.013) \\ 
+  Age Q2-Q3 & $-$0.128$^{***}$ & $-$0.158$^{***}$ & $-$0.160$^{***}$ & $-$0.151$^{***}$ \\ 
+  & (0.043) & (0.019) & (0.021) & (0.014) \\ 
+  Age $>$ Q3 & $-$0.330$^{***}$ & $-$0.291$^{***}$ & $-$0.036$^{*}$ & 0.009 \\ 
+  & (0.056) & (0.027) & (0.021) & (0.018) \\ 
+  log(Deposits) & $-$0.830$^{***}$ & $-$0.752$^{***}$ & 0.108$^{***}$ & 0.021$^{***}$ \\ 
+  & (0.052) & (0.014) & (0.012) & (0.008) \\ 
+  County population density & $-$0.352$^{**}$ & $-$0.450$^{***}$ & $-$1.057$^{***}$ & $-$0.294$^{***}$ \\ 
+  & (0.132) & (0.084) & (0.061) & (0.088) \\ 
+ \hline \\[-1.8ex] 
+Sample & Large & Small & Large & Small \\ 
+Bank$\times$Year FE & Y & Y & Y & Y \\ 
+State$\times$Year FE & Y & Y & Y & Y \\ 
+Observations & 45,116 & 52,010 & 45,116 & 52,010 \\ 
+R$^{2}$ & 0.455 & 0.724 & 0.236 & 0.350 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{4}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+}
+
+\vspace{1cm}
+{\small Panel B}\\
+
+    \resizebox{0.6\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lcccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+%  & \multicolumn{4}{c}{\textit{Dependent variable:}} \\ 
+% \cline{2-5} 
+ & \multicolumn{2}{c}{log(vistors per 1m deposits)} & \multicolumn{2}{c}{log(distance km)} \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4)\\ 
+\hline \\[-1.8ex] 
+ College educated fraction & $-$0.065 & 0.264$^{***}$ & 0.490$^{***}$ & 0.473$^{***}$ \\ 
+  & (0.106) & (0.093) & (0.043) & (0.057) \\ 
+  log(Income) & $-$0.004 & $-$0.013 & $-$0.124$^{***}$ & $-$0.070$^{***}$ \\ 
+  & (0.016) & (0.010) & (0.009) & (0.008) \\ 
+  Stock market participation frac & $-$0.987$^{***}$ & $-$0.719$^{***}$ & 0.914$^{***}$ & 0.994$^{***}$ \\ 
+  & (0.192) & (0.101) & (0.062) & (0.096) \\ 
+  Age Q1-Q2 & $-$0.070$^{***}$ & $-$0.099$^{***}$ & $-$0.053$^{***}$ & $-$0.056$^{***}$ \\ 
+  & (0.020) & (0.019) & (0.011) & (0.011) \\ 
+  Age Q2-Q3 & $-$0.133$^{***}$ & $-$0.207$^{***}$ & $-$0.136$^{***}$ & $-$0.124$^{***}$ \\ 
+  & (0.039) & (0.021) & (0.022) & (0.014) \\ 
+  Age $>$ Q3 & $-$0.267$^{***}$ & $-$0.320$^{***}$ & $-$0.088$^{***}$ & $-$0.006 \\ 
+  & (0.060) & (0.029) & (0.030) & (0.018) \\ 
+  log(Deposits) & $-$0.793$^{***}$ & $-$0.749$^{***}$ & 0.060$^{***}$ & 0.007 \\ 
+  & (0.058) & (0.014) & (0.008) & (0.007) \\ 
+  County population density & $-$0.246$^{*}$ & $-$0.456$^{***}$ & $-$1.217$^{***}$ & $-$0.568$^{***}$ \\ 
+  & (0.130) & (0.087) & (0.057) & (0.085) \\ 
+ \hline \\[-1.8ex] 
+Sample & Large & Small & Large & Small \\ 
+Bank$\times$Year FE & Y & Y & Y & Y \\ 
+State$\times$Year FE & Y & Y & Y & Y \\ 
+Observations & 45,116 & 52,010 & 45,116 & 52,010 \\ 
+R$^{2}$ & 0.464 & 0.725 & 0.293 & 0.381 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{4}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular}
+    }
+    \caption{Usage}
+    \label{table3}
+\end{table}
+
+
+\clearpage
+\begin{figure}
+    \centering
+    \adddescription{
+    \small
+This figure illustrates the evolution of branch usage metrics over time, focusing on the impact of the COVID-19 pandemic. Panel A shows the logarithm of the number of visitors per month, while Panel B shows the logarithm of the median travel distance to branches. Panels A.1 and B.1 correspond to large banks, and Panels A.2 and B.2 correspond to small banks. The x-axis represents months, and the y-axis represents the estimated coefficients ($\beta_m$) with 90\% confidence intervals, capturing the differential effect of branch location in sophisticated zip codes on usage metrics, relative to the omitted base month (January 2019). \sigtextable
+    }
+ \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \caption*{\footnotesize Panel A.1: Large Banks}
+        \includegraphics[width=\textwidth]{resources/figures/old/dynamic_a1.jpg}
+        
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+                \caption*{\footnotesize Panel A.2: Small Banks}
+        \includegraphics[width=\textwidth]{resources/figures/old/dynamic_a2.jpg}
+
+    \end{subfigure}
+    
+    % Second row of 2x2 grid
+    \vspace{1em}  % Add some vertical space between rows
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+                \caption*{\footnotesize Panel B.1: Large Banks}
+        \includegraphics[width=\textwidth]{resources/figures/old/dynamic_b1.jpg}
+
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \caption*{\footnotesize Panel B.2: Small Banks}
+        \includegraphics[width=\textwidth]{resources/figures/old/dynamic_b2.jpg}
+        
+    \end{subfigure}
+         \caption{Dynamic Branch Usage}
+    \label{fig:dynamic_did_plots}
+\end{figure}   
+
+\clearpage
+\begin{table}[]
+    \centering
+    \adddescription{
+\small
+This table provides summary statistics for branch-level data in 2019, split by bank size. Panel A presents statistics for large banks, and Panel B for small banks. For each variable, the table reports the number of observations, mean, standard deviation (SD), and selected percentiles (P10, P25, P50, P75, P90). This breakdown highlights differences between large and small banks in branch characteristics and regional distributions.
+
+
+
+
+
+
+
+
+
+    }
+
+\vspace{0.5cm}
+{\small Panel A: Large Banks}\\
+    \resizebox{\textwidth}{!}{
+\begin{tabular}{lrrrrrrrr}
+  \hline
+Variable & Obs & Mean & SD & P10 & P25 & P50 & P75 & P90 \\ 
+  \hline
+Deposits (mn) & 29427 & 229.52 & 3550.77 & 26.00 & 44.00 & 75.00 & 129.00 & 224.00 \\ 
+  Deposit 3yr growth & 29427 & 0.04 & 0.03 & -0.00 & 0.03 & 0.04 & 0.06 & 0.08 \\ 
+  Mortgage 3yr growth & 29427 & 0.03 & 0.07 & -0.06 & -0.02 & 0.03 & 0.07 & 0.11 \\ 
+  CRA 3yr growth & 29427 & 0.04 & 0.06 & -0.02 & 0.00 & 0.03 & 0.06 & 0.11 \\ 
+  Establishments 3yr growth & 29427 & 0.01 & 0.01 & -0.00 & 0.00 & 0.01 & 0.02 & 0.03 \\ 
+  Payroll 3yr growth & 29427 & 0.04 & 0.02 & 0.02 & 0.03 & 0.04 & 0.06 & 0.07 \\ 
+  Acq. branch/presence & 29427 & 0.00 & 0.07 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\ 
+  Branch owned 3plus years & 29427 & 0.97 & 0.16 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 \\ 
+  Population density (1k km) & 29427 & 0.25 & 0.13 & 0.04 & 0.13 & 0.36 & 0.36 & 0.36 \\ 
+  Low to Moderate Income Area & 29427 & 0.31 & 0.15 & 0.10 & 0.20 & 0.31 & 0.42 & 0.49 \\ 
+   \hline
+\end{tabular}
+}
+
+\vspace{1cm}
+{\small Panel B: Small Banks}\\
+
+    \resizebox{\textwidth}{!}{
+\begin{tabular}{lrrrrrrrr}
+  \hline
+Variable & Obs & Mean & SD & P10 & P25 & P50 & P75 & P90 \\ 
+  \hline
+Deposits (mn) & 43015 & 90.40 & 754.24 & 11.00 & 23.00 & 42.00 & 78.00 & 141.00 \\ 
+  Deposit 3yr growth & 43015 & 0.03 & 0.03 & -0.01 & 0.01 & 0.03 & 0.05 & 0.07 \\ 
+  Mortgage 3yr growth & 43015 & 0.03 & 0.07 & -0.05 & -0.01 & 0.03 & 0.07 & 0.12 \\ 
+  CRA 3yr growth & 43015 & 0.05 & 0.11 & -0.04 & -0.01 & 0.03 & 0.08 & 0.16 \\ 
+  Establishments 3yr growth & 43015 & 0.01 & 0.01 & -0.01 & -0.00 & 0.01 & 0.02 & 0.02 \\ 
+  Payroll 3yr growth & 43015 & 0.04 & 0.03 & 0.00 & 0.02 & 0.04 & 0.05 & 0.07 \\ 
+  Acq. branch/presence & 43015 & 0.01 & 0.09 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\ 
+  Branch owned 3plus years & 43015 & 0.91 & 0.29 & 1.00 & 1.00 & 1.00 & 1.00 & 1.00 \\ 
+  Population density (1k km) & 43015 & 0.15 & 0.14 & 0.01 & 0.02 & 0.09 & 0.36 & 0.36 \\ 
+  Low to Moderate Income Area & 43015 & 0.26 & 0.17 & 0.00 & 0.13 & 0.26 & 0.38 & 0.49 \\ 
+   \hline
+\end{tabular}
+    }
+    \caption{Descriptive Statistics for Branch-Level Data in 2019}
+    \label{table4}
+\end{table}
+
+
+\clearpage
+\begin{table}[]
+    \centering
+    \adddescription{
+\small
+This table presents the baseline linear probability model estimates from Equation (5a), where the dependent variable indicates whether a branch was closed in a given year. Columns 1 and 2 report results for the full sample, while columns 3–6 provide split-sample estimates for large banks (above 100 billion in assets) and small banks (below 100 billion in assets). The primary independent variable, DF per dollar, captures the predicted deposit franchise value. \sigtextable
+
+    }
+    \resizebox{\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lcccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{6}{c}{Closed=1} \\ 
+\cline{2-7} 
+ & \multicolumn{2}{c}{Full sample} & \multicolumn{2}{c}{Large banks} & \multicolumn{2}{c}{Small banks} \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6)\\ 
+\hline \\[-1.8ex] 
+ DF per dollar & $-$0.6614$^{***}$ & $-$0.9551$^{***}$ & $-$1.0436$^{***}$ & $-$1.5931$^{***}$ & $-$0.4561$^{***}$ & $-$0.5008$^{***}$ \\ 
+  & (0.1053) & (0.1477) & (0.1956) & (0.2268) & (0.0786) & (0.0832) \\ 
+  log(Deposits (mn)) & $-$0.0241$^{***}$ & $-$0.0243$^{***}$ & $-$0.0309$^{***}$ & $-$0.0304$^{***}$ & $-$0.0198$^{***}$ & $-$0.0200$^{***}$ \\ 
+  & (0.0014) & (0.0014) & (0.0021) & (0.0020) & (0.0009) & (0.0009) \\ 
+  Acq. branch/presence & 0.0617$^{***}$ & 0.0601$^{***}$ & 0.0762$^{***}$ & 0.0731$^{***}$ & 0.0491$^{***}$ & 0.0481$^{***}$ \\ 
+  & (0.0085) & (0.0083) & (0.0162) & (0.0168) & (0.0089) & (0.0086) \\ 
+  Branch owned 3plus years & $-$0.0077$^{***}$ & $-$0.0089$^{***}$ & $-$0.0084 & $-$0.0087 & $-$0.0089$^{***}$ & $-$0.0098$^{***}$ \\ 
+  & (0.0028) & (0.0027) & (0.0101) & (0.0092) & (0.0022) & (0.0021) \\ 
+  Deposit 3yr growth & $-$0.0213$^{**}$ &  & $-$0.0271$^{**}$ &  & $-$0.0124 &  \\ 
+  & (0.0090) &  & (0.0121) &  & (0.0122) &  \\ 
+  Mortgage 3yr growth & $-$0.0081 &  & $-$0.0113 &  & $-$0.0045 &  \\ 
+  & (0.0056) &  & (0.0125) &  & (0.0049) &  \\ 
+  CRA 3yr growth & $-$0.0014 &  & 0.0086 &  & $-$0.0028 &  \\ 
+  & (0.0035) &  & (0.0123) &  & (0.0031) &  \\ 
+  Establishments 3yr growth & $-$0.2841$^{***}$ &  & $-$0.5675$^{***}$ &  & $-$0.0964$^{***}$ &  \\ 
+  & (0.0600) &  & (0.1118) &  & (0.0362) &  \\ 
+  Payroll 3yr growth & $-$0.0091 &  & $-$0.0394 &  & 0.0091 &  \\ 
+  & (0.0140) &  & (0.0310) &  & (0.0126) &  \\ 
+  Low to Moderate Income Area & $-$0.0102$^{***}$ &  & $-$0.0203$^{***}$ &  & $-$0.0023 &  \\ 
+  & (0.0026) &  & (0.0049) &  & (0.0021) &  \\ 
+ \hline \\[-1.8ex] 
+Bank$\times$Year FE & Y & Y & Y & Y & Y & Y \\ 
+State$\times$Year FE & Y & - & Y & - & Y & - \\ 
+County$\times$Year FE & - & Y & - & Y & - & Y \\ 
+Observations & 655,842 & 655,842 & 264,807 & 264,807 & 391,035 & 391,035 \\ 
+R$^{2}$ & 0.0925 & 0.1248 & 0.0527 & 0.1220 & 0.1406 & 0.1928 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{6}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+    }
+    \caption{Baseline Closure Model}
+    \label{table5}
+\end{table}
+
+
+
+
+\clearpage
+\begin{table}[]
+    \centering
+    \adddescription{
+\small
+This table presents reduced-form estimates of branch closure probability using Equation (5b). Panel A reports results for the full sample, while Panel B splits the sample by bank size (large vs. small banks). The dependent variable is an indicator for branch closure (Closed = 1). A sophisticated zip code is defined as zip codes with above median income, education, and stock market participation. The coefficients of the control variables are suppressed.  \sigtextable
+
+    }
+    \vspace{0.5cm}
+{\small Panel A: Full Sample}\\
+    \resizebox{0.5\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lcccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{4}{c}{Closed=1} \\ 
+\cline{2-5} 
+\\[-1.8ex] & (1) & (2) & (3) & (4)\\ 
+\hline \\[-1.8ex] 
+ College frac & 0.007 & 0.017$^{***}$ &  &  \\ 
+  & (0.005) & (0.005) &  &  \\ 
+  log(Income) & $-$0.003$^{***}$ & $-$0.004$^{***}$ &  &  \\ 
+  & (0.001) & (0.001) &  &  \\ 
+  Stock market frac & 0.037$^{***}$ & 0.029$^{***}$ &  &  \\ 
+  & (0.006) & (0.006) &  &  \\ 
+  Age Q1-Q2 & 0.002$^{*}$ & 0.001 & 0.001 & 0.001 \\ 
+  & (0.001) & (0.001) & (0.001) & (0.001) \\ 
+  Age Q2-Q3 & 0.0003 & 0.0002 & 0.001 & 0.002 \\ 
+  & (0.001) & (0.001) & (0.001) & (0.001) \\ 
+  Age > Q3 & $-$0.00005 & 0.001 & 0.003$^{*}$ & 0.004$^{**}$ \\ 
+  & (0.001) & (0.001) & (0.002) & (0.002) \\ 
+  Sophisticated zipcode &  &  & 0.003$^{***}$ & 0.003$^{***}$ \\ 
+  &  &  & (0.001) & (0.001) \\ 
+  County HHI & 0.0004 &  & 0.001 &  \\ 
+  & (0.003) &  & (0.003) &  \\ 
+  Population density & 0.002 &  & 0.010$^{**}$ &  \\ 
+  & (0.004) &  & (0.005) &  \\ 
+ \hline \\[-1.8ex] 
+Bank$\times$Year FE & Y & Y & Y & Y \\ 
+State$\times$Year FE & Y & - & Y & - \\ 
+County$\times$Year FE & - & Y & - & Y \\ 
+Controls & Y & Y & Y & Y \\ 
+Observations & 655,842 & 655,842 & 655,842 & 655,842 \\ 
+R$^{2}$ & 0.093 & 0.125 & 0.092 & 0.124 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{4}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+    }\\
+
+\vspace{0.5cm}
+{\small Panel B: By Size}\\
+        \resizebox{0.65\textwidth}{!}{
+        \begin{tabular}{@{\extracolsep{5pt}}lcccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{8}{c}{Closed=1} \\ 
+\cline{2-9} 
+ & \multicolumn{2}{c}{Large banks} & \multicolumn{2}{c}{Small banks} & \multicolumn{2}{c}{Large banks} & \multicolumn{2}{c}{Small banks} \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6) & (7) & (8)\\ 
+\hline \\[-1.8ex] 
+ College frac & 0.014 & 0.024$^{**}$ & 0.006 & 0.015$^{***}$ &  &  &  &  \\ 
+  & (0.009) & (0.010) & (0.004) & (0.005) &  &  &  &  \\ 
+  log(Income) & $-$0.007$^{***}$ & $-$0.008$^{***}$ & $-$0.001$^{*}$ & $-$0.003$^{***}$ &  &  &  &  \\ 
+  & (0.001) & (0.002) & (0.001) & (0.001) &  &  &  &  \\ 
+  Stock market frac & 0.057$^{***}$ & 0.052$^{***}$ & 0.014$^{**}$ & 0.008 &  &  &  &  \\ 
+  & (0.009) & (0.009) & (0.005) & (0.006) &  &  &  &  \\ 
+  Age Q1-Q2 & 0.004$^{***}$ & 0.004$^{***}$ & $-$0.001 & $-$0.001 & 0.003$^{***}$ & 0.004$^{**}$ & $-$0.001 & $-$0.001 \\ 
+  & (0.001) & (0.001) & (0.001) & (0.001) & (0.001) & (0.001) & (0.001) & (0.001) \\ 
+  Age Q2-Q3 & 0.004$^{**}$ & 0.002$^{*}$ & $-$0.002$^{***}$ & $-$0.002$^{**}$ & 0.005$^{***}$ & 0.005$^{***}$ & $-$0.002$^{**}$ & $-$0.002$^{*}$ \\ 
+  & (0.002) & (0.001) & (0.001) & (0.001) & (0.002) & (0.002) & (0.001) & (0.001) \\ 
+  Age > Q3 & 0.004 & 0.003 & $-$0.003$^{**}$ & $-$0.002 & 0.009$^{***}$ & 0.010$^{***}$ & $-$0.002 & $-$0.001 \\ 
+  & (0.002) & (0.002) & (0.001) & (0.001) & (0.002) & (0.002) & (0.001) & (0.001) \\ 
+  Sophisticated zipcode &  &  &  &  & 0.006$^{***}$ & 0.007$^{***}$ & 0.001$^{**}$ & 0.001 \\ 
+  &  &  &  &  & (0.001) & (0.001) & (0.001) & (0.001) \\ 
+  County HHI & 0.009 &  & $-$0.004$^{*}$ &  & 0.012$^{**}$ &  & $-$0.004$^{*}$ &  \\ 
+  & (0.005) &  & (0.002) &  & (0.005) &  & (0.002) &  \\ 
+  Population density & $-$0.003 &  & 0.014$^{***}$ &  & 0.007 &  & 0.018$^{***}$ &  \\ 
+  & (0.008) &  & (0.005) &  & (0.009) &  & (0.005) &  \\ 
+ \hline \\[-1.8ex] 
+Bank$\times$Year FE & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+State$\times$Year FE & Y & - & Y & - & Y & - & Y & - \\ 
+County$\times$Year FE & - & Y & - & Y & - & Y & - & Y \\ 
+Controls & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+Observations & 264,807 & 264,807 & 391,035 & 391,035 & 264,807 & 264,807 & 391,035 & 391,035 \\ 
+R$^{2}$ & 0.053 & 0.122 & 0.141 & 0.193 & 0.052 & 0.121 & 0.141 & 0.193 \\
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{8}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+        }
+    \caption{Reduced Form Pooled Model}
+    \label{table6}
+\end{table}
+
+
+
+\clearpage
+\begin{table}[]
+    \centering
+    \adddescription{
+\small
+This table reports year-by-year estimates of Equation (5a), analyzing the relationship between the deposit franchise value (DF per dollar) and branch closures. Panels A and B focus on large banks, while Panels C and D focus on small banks. Panels A and C include state × year fixed effects, and Panels B and D incorporate county × year fixed effects. The dependent variable in all panels is an indicator for branch closure (Closed = 1). The coefficients of the control variables are suppressed. \sigtextable
+    }
+
+    \vspace{0.25cm}
+{\small Panel A: Large Banks}\\
+    \resizebox{0.8\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lccccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{9}{c}{Closed=1} \\ 
+\cline{2-10} 
+ & 2015 & 2016 & 2017 & 2018 & 2019 & 2020 & 2021 & 2022 & 2023 \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6) & (7) & (8) & (9)\\ 
+\hline \\[-1.8ex] 
+ DF per dollar & $-$0.466 & $-$0.451 & $-$0.594$^{*}$ & $-$0.827$^{*}$ & $-$0.803$^{**}$ & $-$2.532$^{***}$ & $-$1.182$^{***}$ & $-$1.711$^{***}$ & $-$1.266$^{***}$ \\ 
+  & (0.350) & (0.380) & (0.312) & (0.409) & (0.314) & (0.656) & (0.285) & (0.512) & (0.283) \\ 
+ \hline \\[-1.8ex] 
+Bank$\times$Year FE & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+State$\times$Year FE & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+Controls & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+Observations & 32,475 & 32,175 & 31,686 & 30,505 & 29,427 & 29,295 & 27,206 & 26,357 & 25,681 \\ 
+R$^{2}$ & 0.041 & 0.051 & 0.040 & 0.043 & 0.059 & 0.069 & 0.056 & 0.042 & 0.026 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{9}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+    }
+
+
+\vspace{0.25cm}
+{\small Panel B: Large Banks - County FE}\\
+    \resizebox{0.8\textwidth}{!}{
+    \begin{tabular}{@{\extracolsep{5pt}}lccccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{9}{c}{Closed=1} \\ 
+\cline{2-10} 
+ & 2015 & 2016 & 2017 & 2018 & 2019 & 2020 & 2021 & 2022 & 2023 \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6) & (7) & (8) & (9)\\ 
+\hline \\[-1.8ex] 
+ DF per dollar & $-$0.640 & $-$0.968$^{**}$ & $-$1.200$^{***}$ & $-$1.347$^{**}$ & $-$1.542$^{***}$ & $-$4.378$^{***}$ & $-$1.636$^{***}$ & $-$2.038$^{***}$ & $-$1.234$^{***}$ \\ 
+  & (0.439) & (0.361) & (0.393) & (0.496) & (0.362) & (0.803) & (0.437) & (0.417) & (0.330) \\ 
+ \hline \\[-1.8ex] 
+Bank$\times$Year FE & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+County$\times$Year FE & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+Controls & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+Observations & 32,475 & 32,175 & 31,686 & 30,505 & 29,427 & 29,295 & 27,206 & 26,357 & 25,681 \\ 
+R$^{2}$ & 0.096 & 0.127 & 0.118 & 0.114 & 0.133 & 0.135 & 0.120 & 0.113 & 0.092 \\  
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{9}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+}
+
+\vspace{0.25cm}
+{\small Panel C: Small Banks}\\
+    \resizebox{0.8\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lccccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{9}{c}{Closed=1} \\ 
+\cline{2-10} 
+ & 2015 & 2016 & 2017 & 2018 & 2019 & 2020 & 2021 & 2022 & 2023 \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6) & (7) & (8) & (9)\\ 
+\hline \\[-1.8ex] 
+ DF per dollar & $-$0.356 & $-$0.202 & $-$0.728$^{***}$ & $-$0.196 & $-$0.384$^{**}$ & $-$0.865$^{***}$ & $-$0.196 & $-$0.427$^{**}$ & $-$0.505$^{***}$ \\ 
+  & (0.240) & (0.180) & (0.208) & (0.243) & (0.185) & (0.219) & (0.188) & (0.204) & (0.150) \\ 
+ \hline \\[-1.8ex] 
+Bank$\times$Year FE & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+State$\times$Year FE & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+Controls & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+Observations & 50,028 & 48,318 & 47,107 & 45,861 & 43,013 & 42,674 & 39,149 & 37,974 & 36,911 \\ 
+R$^{2}$ & 0.131 & 0.195 & 0.142 & 0.122 & 0.148 & 0.133 & 0.145 & 0.107 & 0.116 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{9}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular}
+}
+
+\vspace{0.25cm}
+{\small Panel D: Small Banks - County FE}\\
+    \resizebox{0.8\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lccccccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{9}{c}{Closed=1} \\ 
+\cline{2-10} 
+ & 2015 & 2016 & 2017 & 2018 & 2019 & 2020 & 2021 & 2022 & 2023 \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6) & (7) & (8) & (9)\\ 
+\hline \\[-1.8ex] 
+ DF per dollar & $-$0.569$^{**}$ & $-$0.245 & $-$0.756$^{***}$ & $-$0.350 & $-$0.509$^{**}$ & $-$1.495$^{***}$ & $-$0.098 & $-$0.219 & $-$0.418$^{**}$ \\ 
+  & (0.269) & (0.223) & (0.232) & (0.281) & (0.209) & (0.303) & (0.228) & (0.238) & (0.184) \\ 
+ \hline \\[-1.8ex] 
+Bank$\times$Year FE & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+County$\times$Year FE & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+Controls & Y & Y & Y & Y & Y & Y & Y & Y & Y \\ 
+Observations & 50,028 & 48,318 & 47,107 & 45,861 & 43,013 & 42,674 & 39,149 & 37,974 & 36,911 \\ 
+R$^{2}$ & 0.183 & 0.236 & 0.193 & 0.168 & 0.199 & 0.184 & 0.207 & 0.168 & 0.176 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{9}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+}
+
+    \caption{By Year}
+    \label{table7}
+\end{table}
+
+
+
+
+\clearpage
+\begin{table}[]
+    \centering
+    \adddescription{
+\small
+This table presents estimates from Equation (5c), comparing the relative importance of deposit franchise value (DF per dollar) and branch usage metrics (log of the number of visitors and travel distance metrics) in explaining branch closures. Panel A includes results for the full sample, while Panel B splits the sample into large and small banks. The coefficients of the control variables are suppressed. \sigtextable
+
+    }
+    \vspace{0.5cm}
+{\small Panel A}\\
+    \resizebox{0.7\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{3}{c}{Closed=1} \\ 
+\cline{2-4} 
+ & \multicolumn{3}{c}{Full sample} \\ 
+\\[-1.8ex] & (1) & (2) & (3)\\ 
+\hline \\[-1.8ex] 
+  DF per dollar & $-$0.8218$^{***}$ & $-$0.7819$^{***}$ & $-$0.4496$^{***}$ \\ 
+  & (0.1727) & (0.1595) & (0.1547) \\ 
+  log(No of visitors/1mn deposits) &  & 0.0011 & 0.0008 \\ 
+  &  & (0.0025) & (0.0026) \\ 
+  log(Distance km) &  & 0.0049$^{***}$ & 0.0070$^{***}$ \\ 
+  &  & (0.0017) & (0.0020) \\ 
+ \hline \\[-1.8ex] 
+Bank$\times$Year FE & Y & Y & Y \\ 
+State$\times$Year FE & Y & Y & - \\ 
+County$\times$Year FE & - & - & Y \\ 
+Controls & Y & Y & Y \\ 
+Observations & 125,404 & 94,240 & 94,240 \\ 
+R$^{2}$ & 0.0646 & 0.0587 & 0.0967 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{3}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+    }
+
+    \vspace{0.5cm}
+{\small Panel B}\\
+        \resizebox{\textwidth}{!}{
+        \begin{tabular}{@{\extracolsep{5pt}}lcccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{6}{c}{Closed=1} \\ 
+\cline{2-7} 
+ & \multicolumn{3}{c}{Large banks} & \multicolumn{3}{c}{Small banks} \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6)\\ 
+\hline \\[-1.8ex] 
+ DF per dollar & $-$1.4249$^{***}$ & $-$1.3388$^{***}$ & $-$0.9206$^{***}$ & $-$0.4420$^{***}$ & $-$0.3120$^{***}$ & $-$0.0464 \\ 
+  & (0.2870) & (0.2352) & (0.2017) & (0.1308) & (0.0937) & (0.1444) \\ 
+  log(No of visitors/1mn deposits) &  & 0.0017 & 0.0015 &  & 0.0006 & $-$0.0001 \\ 
+  &  & (0.0048) & (0.0050) &  & (0.0009) & (0.0010) \\ 
+  log(Distance km) &  & 0.0080$^{***}$ & 0.0127$^{***}$ &  & 0.0027$^{**}$ & 0.0042$^{***}$ \\ 
+  &  & (0.0027) & (0.0033) &  & (0.0012) & (0.0015) \\ 
+ \hline \\[-1.8ex] 
+Bank$\times$Year FE & Y & Y & Y & Y & Y & Y \\ 
+State$\times$Year FE & Y & Y & - & Y & Y & - \\ 
+County$\times$Year FE & - & - & Y & - & - & Y \\ 
+Controls & Y & Y & Y & Y & Y & Y \\ 
+Observations & 51,354 & 44,856 & 44,856 & 74,050 & 49,384 & 49,384 \\ 
+R$^{2}$ & 0.0318 & 0.0320 & 0.0951 & 0.1122 & 0.1130 & 0.1810 \\ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{6}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+        }
+    \caption{With Usage Controls}
+    \label{table8}
+\end{table}
+

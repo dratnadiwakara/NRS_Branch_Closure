@@ -1,0 +1,19 @@
+# Ignore everything
+*
+
+# Allow Git to traverse directories
+!*/
+
+# Keep only these specific files
+!_body_Jan2026.tex
+!_internet_appendix_Jan2026.tex
+!_tables_figures_Jan2026.tex
+!_paper_Jan2026.tex
+!references.bib
+
+# Keep these folders and everything inside them
+!figures/
+!figures/**
+
+!code/
+!code/**

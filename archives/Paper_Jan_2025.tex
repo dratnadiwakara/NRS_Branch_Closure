@@ -1,0 +1,126 @@
+\documentclass[12pt]{article}
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{epsfig}
+\usepackage[longnamesfirst]{natbib}
+\usepackage{lscape}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage{tabls}
+\usepackage{setspace}
+\usepackage{verbatim}
+\usepackage{url}
+\usepackage[multiple]{footmisc}
+\usepackage[margin=1in]{geometry}
+\usepackage{color,soul}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{ragged2e}
+\usepackage{geometry}
+\usepackage{pdflscape}
+\usepackage{dcolumn}
+\usepackage{enumerate}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{epstopdf}
+\usepackage[title]{appendix}
+\usepackage{titlesec}
+\usepackage[normalem]{ulem}
+\usepackage[font=bf]{caption}
+\usepackage{mathpazo}
+\usepackage{hyperref}
+\usepackage{tikz} 
+\usepackage{tabularx,booktabs} 
+\usepackage{booktabs}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\setcounter{MaxMatrixCols}{10}
+\usepackage{siunitx}
+%TCIDATA{OutputFilter=LATEX.DLL}
+%TCIDATA{Version=5.50.0.2960}
+%TCIDATA{Codepage=65001}
+%TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
+%TCIDATA{BibliographyScheme=BibTeX}
+%TCIDATA{LastRevised=Thursday, July 23, 2020 13:46:23}
+%TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
+%TCIDATA{Language=American English}
+\usepackage[table]{xcolor}
+%\definecolor{maroon}{cmyk}{0,0.87,0.68,0.32}
+%\definecolor{mygray}{gray}{0.6}
+\hypersetup{
+colorlinks=true,
+citecolor=blue,
+linkcolor=red,
+}
+\titlelabel{\thetitle.\quad}
+
+
+
+\newcommand{\sigtexfigure}{Standard errors are clustered at the bank level.}
+
+
+\newcommand{\adddescription}[1]{
+    \begin{minipage}{0.9\textwidth}
+    \vspace{0.2cm}
+     #1
+    \end{minipage}\\
+    \vspace{0.5cm}
+}
+\doublespacing
+%\floatstyle{ruled}
+\floatstyle{plaintop}
+\restylefloat{table}
+\restylefloat{figure}  
+\newcommand{\floatintro}[1]{
+\vspace*{0.1in}
+{\small
+#1
+}
+\vspace*{0.1in}
+}
+%\newcommand{\sym}{}
+\sloppy
+
+\begin{document}
+
+\title{The Decline of Branch Banking\footnote{The results and views are those of the authors and do not reflect those of the Federal Reserve Bank of Richmond, or the Federal Reserve System.}}
+
+
+
+\author{Rajesh P. Narayanan\thanks{Louisiana State University (rnarayan@lsu.edu)} \and Dimuthu Ratnadiwakara\thanks{The Federal Reserve Bank of Richmond; email: dimuthu.ratnadiwakara@gmail.com)} \and            Philip E. Strahan\thanks{  Boston College \& NBER (strahan@bc.edu)}}
+
+\date{\small{Preliminary Draft; January 2025}}
+
+\maketitle
+
+\begin{abstract}
+\begin{singlespace}
+This paper examines why banks closed branches during 2015 to 2023, a period of significant restructuring in the banking industry.  Closures are higher in areas with more financially sophisticated residents, as better-educated and younger populations reduce the value of the deposit franchise by being more interest-rate sensitive and less reliant on branch proximity. Using a branch-level measure of deposit franchise value based on local demographics, we show that declines in the deposit franchise drive branch closures, especially for large banks. Lending has little explanatory power. The Pandemic accelerated closures by driving widespread adoption of digital banking.
+
+\end{singlespace}
+\end{abstract}
+Keywords: deposit franchise, branch closure, digital banking
+
+
+\thispagestyle{empty}
+
+\clearpage
+
+\input{_body_Jan_2025}
+
+\onehalfspacing
+\clearpage
+\bibliographystyle{chicago}
+\bibliography{resources/branchclosure}
+
+\input{_tables_figures_Jan_2025}
+
+\end{document}
+

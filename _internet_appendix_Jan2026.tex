@@ -1,0 +1,275 @@
+\setcounter{figure}{0}
+\setcounter{table}{0}
+\begin{table}[]
+    \centering
+    \adddescription{
+\small
+This table reports linear probability model estimates from Equation (5a), where the dependent variable equals one if a branch was closed in a given year. Columns 1–2 present estimates for the full sample, while Columns 3–4 and 5–6 report estimates separately for large banks ($>$\$100 billion in assets) and small banks ($<$\$100 billion), respectively. The primary independent variable is deposit franchise (DF) per dollar. Standard errors (in parentheses) are clustered at the bank level. *, **, and *** denote significance at the 10\%, 5\%, and 1\% levels, respectively.}
+    \resizebox{\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lcccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{6}{c}{Closed=1} \\ 
+\cline{2-7} 
+ & \multicolumn{2}{c}{Full sample} & \multicolumn{2}{c}{Large banks} & \multicolumn{2}{c}{Small banks} \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6)\\ 
+\hline \\[-1.8ex] 
+    Deposit Beta                     & 0.1222$^{***}$         & 0.1638$^{***}$  & 0.1648$^{***}$  & 0.2514$^{***}$  & 0.0946$^{***}$  & 0.0911$^{***}$\\   
+                                    & (0.0143)               & (0.0210)        & (0.0229)        & (0.0280)        & (0.0129)        & (0.0141)\\   
+   Openings by other banks          & 0.0026$^{***}$         & 0.0022$^{***}$  & 0.0032$^{***}$  & 0.0027$^{***}$  & 0.0023$^{***}$  & 0.0019$^{***}$\\   
+                                    & (0.0004)               & (0.0004)        & (0.0006)        & (0.0007)        & (0.0005)        & (0.0006)\\   
+   log(Deposits)                    & -0.0199$^{***}$        & -0.0201$^{***}$ & -0.0232$^{***}$ & -0.0233$^{***}$ & -0.0175$^{***}$ & -0.0175$^{***}$\\   
+                                    & (0.0006)               & (0.0007)        & (0.0010)        & (0.0011)        & (0.0005)        & (0.0005)\\   
+   Acq. branch/presence             & 0.0514$^{***}$         & 0.0492$^{***}$  & 0.0559$^{***}$  & 0.0510$^{***}$  & 0.0445$^{***}$  & 0.0426$^{***}$\\   
+                                    & (0.0066)               & (0.0068)        & (0.0108)        & (0.0113)        & (0.0047)        & (0.0047)\\   
+   Branch owned 3plus years         & -0.0055$^{***}$        & -0.0055$^{***}$ & -0.0057$^{*}$   & -0.0068$^{**}$  & -0.0064$^{***}$ & -0.0065$^{***}$\\   
+                                    & (0.0015)               & (0.0014)        & (0.0030)        & (0.0029)        & (0.0011)        & (0.0011)\\   
+   log(Bank-County Mortgage Volume) & -0.0003                & -0.0006$^{*}$   & -0.0009         & -0.0006         & -0.0001         & -0.0005$^{**}$\\   
+                                    & (0.0003)               & (0.0003)        & (0.0008)        & (0.0015)        & (0.0002)        & (0.0002)\\   
+   log(Bank-County CRA Volume)      & $-8.09\times 10^{-5}$  & -0.0003         & 0.0006          & 0.0009          & -0.0002         & -0.0004$^{*}$\\   
+                                    & (0.0003)               & (0.0003)        & (0.0005)        & (0.0008)        & (0.0003)        & (0.0003)\\   
+   Deposit 3yr growth               & 0.0015                 &                 & 0.0035$^{*}$    &                 & 0.0007          &   \\   
+                                    & (0.0010)               &                 & (0.0018)        &                 & (0.0011)        &   \\   
+   Mortgage 3yr growth              & -0.0071$^{**}$         &                 & -0.0075         &                 & -0.0052$^{**}$  &   \\   
+                                    & (0.0028)               &                 & (0.0049)        &                 & (0.0026)        &   \\   
+   CRA 3yr growth                   & -0.0012                &                 & -0.0004         &                 & -0.0012         &   \\   
+                                    & (0.0008)               &                 & (0.0018)        &                 & (0.0008)        &   \\   
+   Establishments 3yr growth        & -0.1390$^{***}$        &                 & -0.2588$^{***}$ &                 & -0.0310$^{*}$   &   \\   
+                                    & (0.0261)               &                 & (0.0452)        &                 & (0.0180)        &   \\   
+   Payroll 3yr growth               & -0.0006                &                 & -0.0061         &                 & 0.0050          &   \\   
+                                    & (0.0057)               &                 & (0.0100)        &                 & (0.0065)        &   \\   
+   Low to Moderate Income Area      & -0.0039$^{**}$         &                 & -0.0098$^{***}$ &                 & 0.0013          &   \\   
+                                    & (0.0015)               &                 & (0.0024)        &                 & (0.0011)        &   \\   
+    \\   
+\hline
+   State $\times$ Year FE     & $\checkmark$    &                 & $\checkmark$    &                 & $\checkmark$           & \\  
+   Bank $\times$ Year FE      & $\checkmark$    & $\checkmark$    & $\checkmark$    & $\checkmark$    & $\checkmark$           & $\checkmark$\\   
+   County $\times$ Year FE    &                 & $\checkmark$    &                 & $\checkmark$    &                        & $\checkmark$\\   
+   \hline
+   Observations                     & 1,592,669              & 1,592,669       & 690,038         & 690,038         & 902,631         & 902,631\\  
+   R$^2$                            & 0.09847                & 0.13108         & 0.05024         & 0.11087         & 0.15685         & 0.21461\\ 
+%   Within R$^2$                & 0.01713         & 0.01687         & 0.01789         & 0.01727         & 0.01691                & 0.01652\\  
+
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{6}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+    }
+    \caption{Baseline Closure Model, Including Openings by Other Banks}
+    \label{tab:baseline_closure_regression2}
+\end{table}
+
+
+
+
+
+
+
+\clearpage
+\begin{table}[]
+    \centering
+    \adddescription{
+\small
+This table presents baseline linear probability model estimates from Equation (5a), where the dependent variable equals one if a branch was opened in a given zip code–year, conditional on the bank not having any branches in that zip code in prior years. Columns 1–2 report estimates for the full sample, while Columns 3–4 and 5–6 present split-sample estimates for large banks ($>$\$100 billion in assets) and small banks ($<1$\$00 billion), respectively. The primary independent variable is deposit franchise (DF) per dollar, which captures the predicted deposit franchise value. Standard errors (in parentheses) are clustered at the bank level. *, **, and *** denote statistical significance at the 10\%, 5\%, and 1\% levels, respectively.
+}
+    \resizebox{\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lcccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{6}{c}{Opening=1} \\ 
+\cline{2-7} 
+ & \multicolumn{2}{c}{Full sample} & \multicolumn{2}{c}{Large banks} & \multicolumn{2}{c}{Small banks} \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6)\\ 
+\hline \\[-1.8ex] 
+ Deposit Beta                 & 0.0186$^{***}$          & 0.0253$^{***}$          & 0.0414$^{***}$          & 0.0558$^{***}$          & 0.0155$^{***}$          & 0.0221$^{***}$\\   
+                                & (0.0016)                & (0.0015)                & (0.0103)                & (0.0104)                & (0.0009)                & (0.0010)\\   
+   Closures by other banks                   & 0.0014$^{***}$          & 0.0014$^{***}$          & 0.0029$^{***}$          & 0.0028$^{***}$          & 0.0013$^{***}$          & 0.0013$^{***}$\\   
+                                & ($9.53\times 10^{-5}$)  & ($9.19\times 10^{-5}$)  & (0.0007)                & (0.0007)                & ($6.46\times 10^{-5}$)  & ($6.34\times 10^{-5}$)\\    
+   log(Zip code deposits)       & 0.0003$^{***}$          & 0.0003$^{***}$          & 0.0005$^{***}$          & 0.0005$^{***}$          & 0.0003$^{***}$          & 0.0003$^{***}$\\   
+                                & ($1.67\times 10^{-5}$)  & ($1.64\times 10^{-5}$)  & ($8.75\times 10^{-5}$)  & ($9.23\times 10^{-5}$)  & ($8.54\times 10^{-6}$)  & ($8.9\times 10^{-6}$)\\    
+   Deposit 3yr growth           & -0.0003$^{**}$          &                         & 0.0009                  &                         & -0.0005$^{***}$         &   \\   
+                                & (0.0001)                &                         & (0.0007)                &                         & (0.0001)                &   \\   
+   Mortgage 3yr growth          & 0.0004                  &                         & -0.0058$^{**}$          &                         & 0.0015$^{***}$          &   \\   
+                                & (0.0006)                &                         & (0.0024)                &                         & (0.0003)                &   \\   
+   CRA 3yr growth               & -0.0004$^{*}$           &                         & 0.0012                  &                         & -0.0008$^{***}$         &   \\   
+                                & (0.0002)                &                         & (0.0008)                &                         & (0.0002)                &   \\   
+   log(lag County Mortgage Vol) & -0.0003                 &                         & 0.0016$^{***}$          &                         & -0.0010$^{***}$         &   \\   
+                                & (0.0002)                &                         & (0.0005)                &                         & ($8.54\times 10^{-5}$)  &   \\   
+   log(lag County CRA Vol)      & 0.0004$^{**}$           &                         & -0.0006$^{*}$           &                         & 0.0009$^{***}$          &   \\   
+                                & (0.0002)                &                         & (0.0003)                &                         & ($7.22\times 10^{-5}$)  &   \\   
+   Establishments 3yr growth    & 0.0276$^{***}$          &                         & 0.0430$^{***}$          &                         & 0.0235$^{***}$          &   \\   
+                                & (0.0023)                &                         & (0.0081)                &                         & (0.0019)                &   \\   
+   Payroll 3yr growth           & 0.0019$^{**}$           &                         & 0.0050                  &                         & 0.0014$^{*}$            &   \\   
+                                & (0.0008)                &                         & (0.0030)                &                         & (0.0007)                &   \\   
+   Low to Moderate Income Area  & -0.0006$^{***}$         &                         & 0.0004                  &                         & -0.0009$^{***}$         &   \\   
+                                & (0.0001)                &                         & (0.0006)                &                         & (0.0001)                &   \\   
+    \\
+    \hline
+       State $\times$ Year FE   & $\checkmark$            &                         & $\checkmark$            &                 & $\checkmark$            & \\  
+   Bank $\times$ Year FE    & $\checkmark$            & $\checkmark$            & $\checkmark$            & $\checkmark$    & $\checkmark$            & $\checkmark$\\   
+   County $\times$ Year FE  &                         & $\checkmark$            &                         & $\checkmark$    &                         & $\checkmark$\\  
+   \hline
+   Observations                 & 12,579,759              & 12,580,951              & 1,409,902               & 1,410,042               & 11,169,857              & 11,170,909\\  
+   R$^2$                        & 0.02850                 & 0.03906                 & 0.02001                 & 0.03886                 & 0.03240                 & 0.04812\\  
+   % Within R$^2$                & 0.00100                 & 0.00078                 & 0.00274                 & 0.00144         & 0.00079                 & 0.00072\\  
+ 
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{6}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+    }
+    \caption{Baseline Opening Model, Including Closures by Other Banks}
+    \label{tab:baseline_open_regression2}
+\end{table}
+
+
+
+
+
+
+\clearpage
+\begin{table}[]
+    \centering
+    \adddescription{
+\small
+This table presents baseline linear probability model estimates from Equation (5a), where the dependent variable equals one if a branch was opened in a given zip code–year, conditional on the bank not having any branches in that zip code in prior years. The sample includes only zip codes from CBSAs in which a given bank owned at least one branch in the prior year.  Columns 1–2 report estimates for the full sample, while Columns 3–4 and 5–6 present split-sample estimates for large banks ($>$\$100 billion in assets) and small banks ($<$\$100 billion), respectively. The primary independent variable is deposit franchise (DF) per dollar, which captures the predicted deposit franchise value. Standard errors (in parentheses) are clustered at the bank level. *, **, and *** denote statistical significance at the 10\%, 5\%, and 1\% levels, respectively.
+}
+    \resizebox{\textwidth}{!}{
+\begin{tabular}{@{\extracolsep{5pt}}lcccccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{6}{c}{Opening=1} \\ 
+\cline{2-7} 
+ & \multicolumn{2}{c}{Full sample} & \multicolumn{2}{c}{Large banks} & \multicolumn{2}{c}{Small banks} \\ 
+\\[-1.8ex] & (1) & (2) & (3) & (4) & (5) & (6)\\ 
+\hline \\[-1.8ex] 
+  Deposit Beta                 & 0.0207$^{***}$          & 0.0275$^{***}$         & 0.0445$^{***}$ & 0.0598$^{***}$ & 0.0174$^{***}$          & 0.0240$^{***}$\\   
+                                & (0.0017)                & (0.0016)               & (0.0106)       & (0.0109)       & (0.0009)                & (0.0011)\\   
+   log(Zip code deposits)       & 0.0003$^{***}$          & 0.0003$^{***}$         & 0.0005$^{***}$ & 0.0006$^{***}$ & 0.0003$^{***}$          & 0.0003$^{***}$\\   
+                                & ($1.84\times 10^{-5}$)  & ($1.8\times 10^{-5}$)  & (0.0001)       & (0.0001)       & ($9.4\times 10^{-6}$)   & ($9.67\times 10^{-6}$)\\    
+   Deposit 3yr growth           & -0.0003$^{**}$          &                        & 0.0009         &                & -0.0005$^{***}$         &   \\   
+                                & (0.0001)                &                        & (0.0007)       &                & (0.0001)                &   \\   
+   Mortgage 3yr growth          & 0.0005                  &                        & -0.0053$^{**}$ &                & 0.0015$^{***}$          &   \\   
+                                & (0.0005)                &                        & (0.0022)       &                & (0.0003)                &   \\   
+   CRA 3yr growth               & -0.0003                 &                        & 0.0015$^{*}$   &                & -0.0008$^{***}$         &   \\   
+                                & (0.0002)                &                        & (0.0008)       &                & (0.0002)                &   \\   
+   log(lag County Mortgage Vol) & -0.0002                 &                        & 0.0017$^{***}$ &                & -0.0010$^{***}$         &   \\   
+                                & (0.0002)                &                        & (0.0005)       &                & ($9.09\times 10^{-5}$)  &   \\   
+   log(lag County CRA Vol)      & 0.0004$^{**}$           &                        & -0.0007$^{*}$  &                & 0.0009$^{***}$          &   \\   
+                                & (0.0002)                &                        & (0.0003)       &                & ($7.7\times 10^{-5}$)   &   \\   
+   Establishments 3yr growth    & 0.0281$^{***}$          &                        & 0.0406$^{***}$ &                & 0.0241$^{***}$          &   \\   
+                                & (0.0024)                &                        & (0.0084)       &                & (0.0019)                &   \\   
+   Payroll 3yr growth           & 0.0011                  &                        & 0.0016         &                & 0.0009                  &   \\   
+                                & (0.0008)                &                        & (0.0028)       &                & (0.0008)                &   \\   
+   Low to Moderate Income Area  & -0.0007$^{***}$         &                        & 0.0005         &                & -0.0009$^{***}$         &   \\   
+                                & (0.0001)                &                        & (0.0007)       &                & (0.0001)                &   \\    
+    \hline
+       State $\times$ Year FE   & $\checkmark$            &                         & $\checkmark$            &                 & $\checkmark$            & \\  
+   Bank $\times$ Year FE    & $\checkmark$            & $\checkmark$            & $\checkmark$            & $\checkmark$    & $\checkmark$            & $\checkmark$\\   
+   County $\times$ Year FE  &                         & $\checkmark$            &                         & $\checkmark$    &                         & $\checkmark$\\  
+ Observations                 & 10,720,601              & 10,721,616             & 1,201,496      & 1,201,613      & 9,519,105               & 9,520,003\\  
+   R$^2$                        & 0.03137                 & 0.04319                & 0.02026        & 0.04118        & 0.03612                 & 0.05376\\  
+\hline 
+\hline \\[-1.8ex] 
+\textit{Note:}  & \multicolumn{6}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+\end{tabular} 
+    }
+    \caption{Baseline Opening Model, with Only Zip Codes from Current CBSA Markets}
+    \label{tab:baseline_open_regression4}
+\end{table}
+
+
+
+% \clearpage
+% \begin{table}[]
+%     \centering
+%     \adddescription{
+% \small
+% This table reports regression estimates from Equation (3), examining branch usage and customer travel distance to branches. Results are shown separately for large banks ($\geq$\$100 billion in assets) and small banks ($<$\$100 billion in assets). Panel A presents estimates from a parsimonious model using a single indicator for sophisticated zip codes. Panel B reports estimates using separate demographic variables, including age quartiles, income, education, and stock market participation. Columns 1–2 report regressions where the dependent variable is branch usage, defined as the percentage drop in visits from 2019 to 2021 for each branch. Columns 3–4 use the mean distance (in kilometers) that customers traveled to visit the branch in 2019 as the dependent variable.  *, **, and *** denote significance at the 10\%, 5\%, and 1\% levels, respectively.
+
+%     }
+% \vspace{0.5cm}
+% {\small Panel A}\\
+%     \resizebox{0.5\textwidth}{!}{
+% \begin{tabular}{@{\extracolsep{5pt}}lcccc} 
+% \\[-1.8ex]\hline 
+% \hline \\[-1.8ex] 
+% %  & \multicolumn{4}{c}{\textit{Dependent variable:}} \\ 
+% % \cline{2-5} 
+%  & \multicolumn{2}{c}{Drop in visits} & \multicolumn{2}{c}{log(distance km)} \\ 
+%  \\[-1.8ex] & Large banks & Small banks & Large banks & Small banks\\ 
+% \\[-1.8ex] & (1) & (2) & (3) & (4)\\ 
+% \hline \\[-1.8ex] 
+%     Sophisticated zipcode & 0.0652$^{***}$  & 0.1034$^{***}$  & 0.1841$^{***}$  & 0.1212$^{***}$\\   
+%                          & (0.0099)        & (0.0077)        & (0.0187)        & (0.0092)\\   
+%    Age Q1-Q2             & -0.0200$^{***}$ & -0.0410$^{***}$ & -0.0661$^{***}$ & -0.0440$^{***}$\\   
+%                          & (0.0043)        & (0.0080)        & (0.0122)        & (0.0099)\\   
+%    Age Q2-Q3             & -0.0703$^{***}$ & -0.1039$^{***}$ & -0.0795$^{***}$ & -0.0515$^{***}$\\   
+%                          & (0.0076)        & (0.0094)        & (0.0204)        & (0.0127)\\   
+%    Age $>$Q3               & -0.0710$^{***}$ & -0.1264$^{***}$ & 0.0280          & 0.0888$^{***}$\\   
+%                          & (0.0113)        & (0.0124)        & (0.0247)        & (0.0168)\\   
+%    log(Income)           & 0.0053          & 0.0093$^{**}$   & -0.0698$^{***}$ & -0.0354$^{***}$\\   
+%                          & (0.0042)        & (0.0043)        & (0.0084)        & (0.0051)\\   
+%    log(Deposits)         & 0.0185$^{***}$  & 0.0278$^{***}$  & 0.0291$^{**}$   & -0.0129$^{**}$\\   
+%                          & (0.0064)        & (0.0040)        & (0.0115)        & (0.0057)\\   
+%    Population density    & 0.3688$^{***}$  & 0.5439$^{***}$  & -0.3718$^{***}$ & -0.1433$^{**}$\\   
+%                          & (0.0405)        & (0.0248)        & (0.0282)        & (0.0556)\\ 
+%        \hline
+%    Bank FE   & $\checkmark$    & $\checkmark$    & $\checkmark$    & $\checkmark$\\   
+%    State FE  & $\checkmark$    & $\checkmark$    & $\checkmark$    & $\checkmark$\\  \hline
+%   Observations          & 26,521          & 26,276          & 26,560          & 26,355\\  
+%    R$^2$                 & 0.26680         & 0.43095         & 0.19958         & 0.33392\\  
+%    %Within R$^2$             & 0.08109         & 0.08541         & 0.06157         & 0.01908\\  
+% \hline 
+% \hline \\[-1.8ex] 
+% \textit{Note:}  & \multicolumn{4}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+% \end{tabular} 
+% }
+
+% \vspace{0.5cm}
+% {\small Panel B}\\
+
+%     \resizebox{0.5\textwidth}{!}{
+% \begin{tabular}{@{\extracolsep{5pt}}lcccc} 
+% \\[-1.8ex]\hline 
+% \hline \\[-1.8ex] 
+% %  & \multicolumn{4}{c}{\textit{Dependent variable:}} \\ 
+% % \cline{2-5} 
+%  & \multicolumn{2}{c}{Drop in visits} & \multicolumn{2}{c}{log(distance km)} \\ 
+%  \\[-1.8ex] & Large banks & Small banks & Large banks & Small banks\\ 
+% \\[-1.8ex] & (1) & (2) & (3) & (4)\\ 
+% \hline \\[-1.8ex] 
+%    College frac         & 0.4153$^{***}$  & 0.4414$^{***}$  & 0.4255$^{***}$  & 0.1894$^{***}$\\   
+%                         & (0.0312)        & (0.0318)        & (0.0352)        & (0.0465)\\   
+%    Stock market frac    & 0.0001          & 0.1851$^{***}$  & 0.8185$^{***}$  & 0.8561$^{***}$\\   
+%                         & (0.0281)        & (0.0368)        & (0.0703)        & (0.0656)\\   
+%    Age Q1-Q2            & -0.0381$^{***}$ & -0.0528$^{***}$ & -0.0455$^{***}$ & -0.0166\\   
+%                         & (0.0042)        & (0.0082)        & (0.0095)        & (0.0103)\\   
+%    Age Q2-Q3            & -0.1025$^{***}$ & -0.1275$^{***}$ & -0.1011$^{***}$ & -0.0474$^{***}$\\   
+%                         & (0.0094)        & (0.0098)        & (0.0194)        & (0.0126)\\   
+%    Age $>$Q3              & -0.1156$^{***}$ & -0.1541$^{***}$ & -0.0560         & 0.0693$^{***}$\\   
+%                         & (0.0121)        & (0.0124)        & (0.0334)        & (0.0169)\\   
+%    log(Income)          & -0.0286$^{***}$ & -0.0139$^{***}$ & -0.1154$^{***}$ & -0.0509$^{***}$\\   
+%                         & (0.0046)        & (0.0049)        & (0.0076)        & (0.0056)\\   
+%    log(Deposits)        & 0.0127$^{*}$    & 0.0252$^{***}$  & 0.0071          & -0.0186$^{***}$\\   
+%                         & (0.0067)        & (0.0038)        & (0.0123)        & (0.0055)\\   
+%    Population density   & 0.3058$^{***}$  & 0.4568$^{***}$  & -0.4754$^{***}$ & -0.2577$^{***}$\\   
+%                         & (0.0353)        & (0.0229)        & (0.0293)        & (0.0539)\\   
+%                             \hline
+%     Bank FE   & $\checkmark$    & $\checkmark$    & $\checkmark$    & $\checkmark$\\   
+%    State FE  & $\checkmark$    & $\checkmark$    & $\checkmark$    & $\checkmark$\\  
+%    \hline
+%    Observations         & 26,521          & 26,276          & 26,560          & 26,355\\ 
+%    R$^2$                    & 0.28         & 0.44         & 0.26         & 0.36\\  
+% %   Within R$^2$             & 0.09782         & 0.09675         & 0.12277         & 0.04869\\  
+    
+ 
+  
+% \hline 
+% \hline \\[-1.8ex] 
+% \textit{Note:}  & \multicolumn{4}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+% \end{tabular}
+%     }
+%     \caption{Usage}
+%     \label{tab:ia_usage}
+% \end{table}

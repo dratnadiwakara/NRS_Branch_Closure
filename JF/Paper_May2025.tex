@@ -1,0 +1,139 @@
+\documentclass[12pt]{article}
+\usepackage{fullpage}
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{longtable}
+\usepackage{graphicx}
+\usepackage{graphics}
+\usepackage{epsfig}
+\usepackage[longnamesfirst]{natbib}
+\usepackage{lscape}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage{tabls}
+\usepackage{setspace}
+\usepackage{verbatim}
+\usepackage{url}
+\usepackage[multiple]{footmisc}
+\usepackage[margin=1in]{geometry}
+\usepackage{color,soul}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{ragged2e}
+\usepackage{geometry}
+\usepackage{pdflscape}
+\usepackage{dcolumn}
+\usepackage{enumerate}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{epstopdf}
+\usepackage[title]{appendix}
+\usepackage{titlesec}
+\usepackage[normalem]{ulem}
+\usepackage[font=bf]{caption}
+\usepackage{mathpazo}
+\usepackage{hyperref}
+\usepackage{tikz} 
+\usepackage{tabularx,booktabs} 
+\usepackage{booktabs}
+\usepackage{subcaption}
+\usepackage{graphicx}
+\setcounter{MaxMatrixCols}{10}
+\usepackage{siunitx}
+%TCIDATA{OutputFilter=LATEX.DLL}
+%TCIDATA{Version=5.50.0.2960}
+%TCIDATA{Codepage=65001}
+%TCIDATA{<META NAME="SaveForMode" CONTENT="1">}
+%TCIDATA{BibliographyScheme=BibTeX}
+%TCIDATA{LastRevised=Thursday, July 23, 2020 13:46:23}
+%TCIDATA{<META NAME="GraphicsSave" CONTENT="32">}
+%TCIDATA{Language=American English}
+\usepackage[table]{xcolor}
+%\definecolor{maroon}{cmyk}{0,0.87,0.68,0.32}
+%\definecolor{mygray}{gray}{0.6}
+\hypersetup{
+colorlinks=true,
+citecolor=blue,
+linkcolor=red,
+}
+\titlelabel{\thetitle.\quad}
+
+
+
+\newcommand{\sigtexfigure}{Standard errors are clustered at the bank level.}
+
+
+\newcommand{\adddescription}[1]{
+    \begin{minipage}{0.9\textwidth}
+    \vspace{0.2cm}
+     #1
+    \end{minipage}\\
+    \vspace{0.5cm}
+}
+\doublespacing
+%\floatstyle{ruled}
+\floatstyle{plaintop}
+\restylefloat{table}
+\restylefloat{figure}  
+\newcommand{\floatintro}[1]{
+\vspace*{0.1in}
+{\small
+#1
+}
+\vspace*{0.1in}
+}
+%\newcommand{\sym}{}
+\sloppy
+
+\begin{document}
+
+\title{The Decline of Branch Banking\footnote{The results and views are those of the authors and do not reflect those of the Federal Reserve Bank of Richmond, or the Federal Reserve System.  We thank seminar participants at Boston College, the Federal Reserve Bank of Chicago, the University of Florida, and participants at the University of Delaware/Philadelphia Fed Fintech Conference.  We used ChatGPT to assist us in copy editing this manuscript, and also in constructing some of the computer code used to build our dataset.}}
+
+
+
+\author{Rajesh P. Narayanan\thanks{Louisiana State University (rnarayan@lsu.edu)} \and Dimuthu Ratnadiwakara\thanks{The Federal Reserve Bank of Richmond (dimuthu.ratnadiwakara@gmail.com)} \and            Philip E. Strahan\thanks{  Boston College \& NBER (strahan@bc.edu)}}
+
+\date{\small{This Version: May 2025}}
+
+\maketitle
+
+\begin{abstract}
+\begin{singlespace}
+We study U.S. bank branch openings and closings from 2001 to 2023. Both are more common in areas with low deposit franchise value, a consequence of greater interest-rate sensitivity among financially sophisticated households with higher digital banking adoption. The effects are strongest for large banks. Lending plays a minimal role. Incumbents retain branches where depositors are less sensitive to rates because they can extract deposit spreads; entrants avoid such markets because sticky customers are difficult to attract. The pandemic accelerated closures by increasing digital reliance. Our findings highlight deposit franchise value as the primary driver of modern branch restructuring.
+
+\end{singlespace}
+\end{abstract}
+\hspace{1cm}\textbf{Keywords:} deposit franchise, branch closure, digital banking
+
+
+\thispagestyle{empty}
+
+\clearpage
+
+\input{_body_March2025}
+
+\onehalfspacing
+\clearpage
+\bibliographystyle{chicago}
+\bibliography{resources/branchclosure}
+
+\input{_tables_figures_March2025}
+
+
+\clearpage
+\appendix
+\renewcommand\thefigure{IA.\arabic{figure}}
+\renewcommand\thetable{IA.\arabic{table}}
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+{\Large \noindent \textbf{Internet Appendix:} The Decline of Branch Banking}\\
+Rajesh P. Narayanan; Dimuthu Ratnadiwakara; Philip E. Strahan\\
+
+\input{_internet_appendix_April2025}
+
+\end{document}
+
