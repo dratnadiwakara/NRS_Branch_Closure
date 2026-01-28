@@ -1,2 +1,24 @@
 archives/
 archives/**
+
+# LaTeX compilation files
+paper_Jan2026.pdf
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
+*.toc
+*.lof
+*.lot
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+*.nav
+*.snm
+*.vrb
+
+# R configuration files
+.Rprofile
+.Rhistory
+.RData
