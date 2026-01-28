@@ -30,6 +30,9 @@ hmda <- readRDS(file.path(data_dir, "hmda_county_loan_gr.rds"))
 # Low-to-Moderate Income indicator (FHFA - https://www.fhfa.gov/data/underserved-areas-data)
 lmi <- readRDS(file.path(data_dir, "lmi.rds"))
 
+# County population density
+county_population_density <- readRDS(file.path(data_dir, "county_population_density.rds"))
+
 # ==============================================================================
 # 2. Load Branch Data for County Deposits & HHI
 # ==============================================================================
@@ -99,6 +102,11 @@ county_control_df <- merge(county_control_df, lmi,
                            by.x = c("county_code", "year"), 
                            by.y = c("county", "yr"), all.x = TRUE)
 
+# Merge population density
+county_control_df <- merge(county_control_df, county_population_density,
+                           by.x = c("county_code", "year"),
+                           by.y = c("county", "yr"), all.x = TRUE)
+
 # Merge CBP
 county_control_df <- merge(county_control_df, cbp, 
                            by = c("county_code", "year"), all.x = TRUE)
@@ -118,7 +126,7 @@ county_control_df <- merge(county_control_df, county_hhi,
 # ==============================================================================
 
 control_vars <- c("lag_hmda_mtg_amt_gr", "lag_county_gdp_gr", "lag_cra_loan_amount_amt_lt_1m_gr",
-                  "lag_county_deposit_gr", "lmi", "lag_establishment_gr", "lag_payroll_gr")
+                  "lag_county_deposit_gr", "lmi", "population_density", "lag_establishment_gr", "lag_payroll_gr")
 
 # Keep only variables that exist in the data
 control_vars <- control_vars[control_vars %in% names(county_control_df)]

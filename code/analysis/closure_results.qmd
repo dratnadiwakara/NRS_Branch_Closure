@@ -1,0 +1,423 @@
+---
+title: "Deposit Beta Analysis"
+format: 
+  html:
+    toc: true
+    code-fold: true
+    df-print: paged
+editor: visual
+---
+
+# Setup
+
+```{r}
+#| label: setup
+#| message: false
+
+rm(list = ls())
+gc()
+library(data.table)
+library(dplyr)
+library(fixest)
+library(modelsummary)
+library(kableExtra)
+library(ggplot2)
+library(lubridate)
+library(xtable)
+
+# Load summary statistics function
+source('https://raw.githubusercontent.com/dratnadiwakara/r-utilities/refs/heads/main/summary_stat_tables.R')
+
+data_dir <- "C:/OneDrive/data/nrs_branch_closure"
+
+# Load deposit beta results
+results <- readRDS(file.path(data_dir, "deposit_beta_results.rds"))
+```
+
+# Overview
+
+This analysis examines how banks' deposit costs respond to interest rate changes (deposit beta) across three Fed hiking cycles:
+
+- **2004-2006**: Fed Funds +3.5pp
+- **2016-2019**: Fed Funds +2.5pp  
+- **2022-2023**: Fed Funds +4.0pp
+
+# Bank Characteristics by Size
+
+Define large banks using CPI-adjusted asset cutoff ($100M in 2024 dollars):
+
+```{r}
+#| label: define-large-banks
+
+# Load CPI data for inflation adjustment
+# Source: FRED CPIAUCSL series
+# library(quantmod)
+# cpi <- getSymbols("CPIAUCSL",src="FRED",auto.assign = F)
+# cpi <- data.table(date=index(cpi),CPI=coredata(cpi))
+# cpi <- cpi %>% mutate(year=year(date)) %>%
+#        group_by(year) %>%
+#       summarize(CPI=last(CPI.CPIAUCSL)) %>% ungroup() %>% data.table()
+# saveRDS(cpi,"../data/cpi.rds")
+
+cpi <- readRDS(file.path(data_dir, "cpi.rds"))
+cpi[, adj_ratio := CPI / CPI[year == 2024]]
+cpi[, asset_cutoff := adj_ratio * 100000000]
+
+# Get all bank-level data across cycles
+all_banks <- rbindlist(lapply(names(results), function(cycle_name) {
+  dt <- copy(results[[cycle_name]]$data)
+  dt[, cycle := cycle_name]
+  # Add year for each cycle (using end year)
+  dt[, year := ifelse(cycle == "cycle_0406", 2006,
+                     ifelse(cycle == "cycle_1619", 2019, 2023))]
+  return(dt)
+}))
+
+# Merge with CPI cutoffs
+all_banks <- merge(all_banks, cpi[, .(year, asset_cutoff)], by = "year", all.x = TRUE)
+
+# Define large banks
+large_banks <- unique(all_banks[bank_assets > asset_cutoff]$ID_RSSD)
+```
+
+## Prepare Branch-Level Sample
+
+Load branch sample and calculate deposit betas using predictions from bank-level regressions:
+
+```{r}
+#| label: prepare-branch-sample
+
+# Load branch-level data
+branch_sample <- readRDS(file.path(data_dir, "branch_closure_analysis_sample.rds"))
+
+# Add large_bank indicator
+branch_sample[, large_bank := ifelse(RSSDID %in% large_banks, 1, 0)]
+
+# Create factor variables needed for prediction
+branch_sample[, factor_age_bin := as.factor(age_bin)]
+
+# Predict deposit expense changes for each branch using each cycle's regression
+for(i in 1:length(results)) {
+  cycle_nm <- names(results)[i]
+  branch_sample[, pred_int_exp_chg := predict(results[[i]]$reg, newdata = branch_sample)]
+  setnames(branch_sample, "pred_int_exp_chg", paste0("pred_int_exp_chg_", cycle_nm))
+}
+
+# Calculate deposit beta based on year and rate changes
+# Rate changes: 2004-06: 3.5pp, 2016-19: 2.5pp, 2022-23: 4.0pp
+branch_sample[, deposit_beta := ifelse(yr <= 2014, pred_int_exp_chg_cycle_0406 / 0.035,
+                                      ifelse(yr <= 2019, pred_int_exp_chg_cycle_1619 / 0.025,
+                                             pred_int_exp_chg_cycle_2224 / 0.040))]
+
+# Calculate deposit franchise value per dollar
+branch_sample[, df_per_dollar := (1 - deposit_beta) * (1 - (1 / (1.025)^10))]
+
+# Create rate cycle variable
+branch_sample[, rate_cycle := ifelse(yr >= 2004 & yr <= 2006, "1early",
+                                    ifelse(yr >= 2016 & yr <= 2019, "2mid",
+                                    ifelse(yr >= 2022 & yr <= 2023, "3late", NA)))]
+
+cat("Branch sample prepared with", nrow(branch_sample), "observations\n")
+cat("Observations by rate cycle:\n")
+print(table(branch_sample$rate_cycle, useNA = "ifany"))
+```
+
+## Summary Statistics by Bank Size
+
+```{r}
+#| label: tbl-bank-stats
+#| tbl-cap: "Bank-Level Characteristics by Size and Cycle"
+#| results: asis
+
+# Store results in list
+result_tables <- list()
+
+# Create table for each cycle
+for(i in 1:length(results)) {
+  cat("\n### Cycle:", names(results)[[i]], "\n\n")
+  
+  temp <- copy(results[[i]]$data)
+  temp[, large_bank := ifelse(ID_RSSD %in% large_banks, 1, 0)]
+  temp[, family_income := floor(family_income / 1000)]  # Convert to thousands
+  
+  # Rename variables for display
+  setnames(temp,
+           c("deposit_beta", "age", "college_frac", "dividend_frac", "family_income", 
+             "sophisticated_frac", "bank_hhi", "population_density"),
+           new_names <- c("Deposit beta", "Age", "College educated fraction", 
+                         "Stock market participation frac", "Family income (000)", 
+                         "Frac. deposits in sophisticated zipcodes", "HHI", 
+                         "Deposit-weighted Pop. density"))
+  
+  cat("Number of banks by size:\n")
+  print(table(temp$large_bank))
+  cat("\n")
+  
+  # Summary stats for large banks
+  temp1 <- summary_stats_function(temp[large_bank == 1], new_names)
+  temp1 <- temp1 %>% select(-P25, -P50, -P75, -Obs)
+  
+  # Summary stats for small banks
+  temp2 <- summary_stats_function(temp[large_bank == 0], new_names)
+  temp2 <- temp2 %>% select(-P25, -P50, -P75, -Obs)
+  
+  # Merge tables
+  result_tables[[paste0('bank_stats_', names(results)[[i]])]] <- 
+    merge(temp1, temp2, by = "Variable")
+  
+  # Print table (text format)
+  print(kable(result_tables[[paste0('bank_stats_', names(results)[[i]])]], 
+              digits = 3, format = "simple"))
+  
+  # LaTeX version (uncomment to use)
+  # print(xtable(result_tables[[paste0('bank_stats_', names(results)[[i]])]]),
+  #       table.placement = NULL, floating = FALSE, include.rownames = FALSE,
+  #       comment = FALSE, scalebox = 0.8, latex.environments = "center")
+  
+  cat("\n\n")
+}
+```
+
+# Deposit Beta Regressions
+
+Table showing how depositor characteristics predict deposit beta sensitivity:
+
+```{r}
+#| label: tbl-deposit-beta-regs
+#| tbl-cap: "Deposit Beta Regressions"
+
+# Coefficient dictionary for display names
+covariate_labels_dict <- c(
+  "college_frac" = "College frac",
+  "dividend_frac" = "Stock market frac",
+  "log(family_income)" = "Log(Income)",
+  "sophisticated_frac" = "Sophisticated frac",
+  "factor_age_bin2" = "Age bin 2",
+  "factor_age_bin3" = "Age bin 3",
+  "factor_age_bin4" = "Age bin 4",
+  "bank_hhi" = "Bank HHI",
+  "log(bank_assets)" = "Log(Assets)",
+  "population_density" = "Pop. density",
+  "trans_accts_frac_assets" = "Trans. accounts",
+  "uninsured_deposits_frac" = "Uninsured deposits"
+)
+
+# Create table using etable
+etable(
+  results$cycle_0406$reg, results$cycle_1619$reg, results$cycle_2224$reg,
+  results$cycle_0406$reg_sophisticated, results$cycle_1619$reg_sophisticated, results$cycle_2224$reg_sophisticated,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  headers = list("Early Cycle" = 1, "Mid Cycle" = 1, "Late Cycle" = 1, 
+                 "Early Cycle" = 1, "Mid Cycle" = 1, "Late Cycle" = 1),
+  dict = covariate_labels_dict,
+  depvar = FALSE
+)
+
+# LaTeX version with AER style (uncomment to use)
+# etable(
+#   results$cycle_0406$reg, results$cycle_1619$reg, results$cycle_2224$reg,
+#   results$cycle_0406$reg_sophisticated, results$cycle_1619$reg_sophisticated, results$cycle_2224$reg_sophisticated,
+#   se.below = TRUE,
+#   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#   headers = list("Early Cycle" = 1, "Mid Cycle" = 1, "Late Cycle" = 1, 
+#                  "Early Cycle" = 1, "Mid Cycle" = 1, "Late Cycle" = 1),
+#   dict = covariate_labels_dict,
+#   depvar = FALSE,
+#   tex = TRUE,
+#   style.tex = style.tex("aer")
+# )
+```
+
+# Distribution of Deposit Betas
+
+## Bank-Level
+
+Distribution of deposit betas across cycles, comparing large and small banks:
+
+```{r}
+#| label: fig-beta-density-bank
+#| fig-cap: "Bank-Level Deposit Beta Distribution"
+#| fig-width: 8
+#| fig-height: 4
+
+# Combine data from all cycles
+beta_density <- data.table()
+for(i in 1:length(results)) {
+  cycle_nm <- names(results)[[i]]
+  temp <- results[[i]]$data[, .(ID_RSSD, deposit_beta)]
+  temp[, large_bank := ifelse(ID_RSSD %in% large_banks, 1, 0)]
+  temp[, cycle := cycle_nm]
+  beta_density <- rbind(beta_density, temp)
+}
+
+# Create density plot
+g <- ggplot(beta_density, aes(x = deposit_beta, fill = factor(large_bank))) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~cycle, labeller = as_labeller(c(
+    "cycle_0406" = "Early Cycle",
+    "cycle_1619" = "Mid Cycle",
+    "cycle_2224" = "Late Cycle"
+  ))) +
+  scale_x_continuous(n.breaks = 4) +
+  scale_fill_manual(
+    values = c("1" = "dodgerblue4", "0" = "tan2"),
+    labels = c("1" = "Large banks", "0" = "Small banks")
+  ) +
+  labs(x = "", y = "") +
+  theme_minimal() +
+  theme(
+    legend.title = element_blank(),
+    legend.position = "bottom",
+    axis.text.y = element_blank(),
+    panel.spacing = unit(2, "lines"),
+    strip.text = element_text(face = "bold")
+  )
+
+print(g)
+
+# Uncomment to save
+# ggsave(file.path(data_dir, "../figures/beta_density_bank.jpg"), g, 
+#        width = 5, height = 3)
+```
+
+## Branch-Level
+
+Distribution of deposit betas at the branch level:
+
+```{r}
+#| label: fig-beta-density-branch
+#| fig-cap: "Branch-Level Deposit Beta Distribution"
+#| fig-width: 8
+#| fig-height: 4
+
+# Calculate branch-level average deposit beta by cycle
+beta_density_branch <- branch_sample[!is.na(rate_cycle), 
+                                     .(deposit_beta = mean(deposit_beta, na.rm = TRUE)), 
+                                     by = .(rate_cycle, large_bank, UNINUMBR)]
+
+# Winsorize at 0.1% and 99.9% by cycle
+beta_density_branch[, `:=`(
+  q1 = quantile(deposit_beta, probs = 0.001, na.rm = TRUE),
+  q2 = quantile(deposit_beta, probs = 0.999, na.rm = TRUE)
+), by = rate_cycle]
+
+beta_density_branch[, deposit_beta := ifelse(deposit_beta < q1, q1, 
+                                             ifelse(deposit_beta > q2, q2, deposit_beta))]
+
+# Create density plot
+g <- ggplot(beta_density_branch, aes(x = deposit_beta, fill = factor(large_bank))) +
+  geom_density(alpha = 0.5) +
+  facet_wrap(~rate_cycle, labeller = as_labeller(c(
+    "1early" = "Early Cycle",
+    "2mid" = "Mid Cycle",
+    "3late" = "Late Cycle"
+  ))) +
+  scale_x_continuous(n.breaks = 4) +
+  scale_fill_manual(
+    values = c("1" = "dodgerblue4", "0" = "tan2"),
+    labels = c("1" = "Large banks", "0" = "Small banks")
+  ) +
+  labs(x = "", y = "") +
+  theme_minimal() +
+  theme(
+    legend.title = element_blank(),
+    legend.position = "bottom",
+    axis.text.y = element_blank(),
+    panel.spacing = unit(2, "lines"),
+    strip.text = element_text(face = "bold")
+  )
+
+print(g)
+
+# Uncomment to save
+# ggsave(file.path(data_dir, "../figures/beta_density_branch.jpg"), g, 
+#        width = 5, height = 3)
+```
+
+# Branch Closure Analysis
+
+## Define Control Variables
+
+Set up control variable specifications for closure regressions:
+
+```{r}
+#| label: define-controls
+
+# State-level controls with extensive covariates
+setFixest_fml(
+  ..ctrl_state_closure = ~ log(lag_branch_deposit_amount) + same_zip_prior_3yr_branches + 
+                           legacy_branch + lag_county_deposit_gr + 
+                           lag_hmda_mtg_amt_gr + lag_cra_loan_amount_amt_lt_1m_gr + 
+                           lag_establishment_gr + lag_payroll_gr + lmi | state_yr + bank_yr,
+  
+  # County-level controls with simplified specification
+  ..ctrl_county_closure = ~ log(lag_branch_deposit_amount) + same_zip_prior_3yr_branches + 
+                            legacy_branch | county_yr + bank_yr
+)
+
+# Create fixed effect variables
+branch_sample[, state_yr := paste0(substr(STCNTYBR, 1, 2), "_", yr)]
+branch_sample[, county_yr := paste0(STCNTYBR, "_", yr)]
+branch_sample[, bank_yr := paste0(RSSDID, "_", yr)]
+
+cat("Control variables defined\n")
+```
+
+## Baseline Closure Model
+
+Relationship between deposit beta and branch closure probability:
+
+```{r}
+#| label: tbl-baseline-closure
+#| tbl-cap: "Baseline Branch Closure Regressions"
+
+# Run regressions for all banks, large banks, and small banks
+closure_regs <- list(
+  # All banks
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample, vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample, vcov = ~RSSDID),
+  
+  # Large banks
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample[large_bank == 1], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample[large_bank == 1], vcov = ~RSSDID),
+  
+  # Small banks
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample[large_bank == 0], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample[large_bank == 0], vcov = ~RSSDID)
+)
+
+# Display results
+etable(
+  closure_regs,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  headers = list("All Banks" = 2, "Large Banks" = 2, "Small Banks" = 2),
+  dict = c("deposit_beta" = "Deposit beta"),
+  depvar = FALSE
+)
+
+# LaTeX version (uncomment to use)
+# etable(
+#   closure_regs,
+#   se.below = TRUE,
+#   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#   headers = list("All Banks" = 2, "Large Banks" = 2, "Small Banks" = 2),
+#   dict = c("deposit_beta" = "Deposit beta"),
+#   depvar = FALSE,
+#   tex = TRUE,
+#   style.tex = style.tex("aer")
+# )
+```
+
+# Session Info
+
+```{r}
+sessionInfo()
+```

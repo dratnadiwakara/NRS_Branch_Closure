@@ -1,0 +1,1830 @@
+---
+title: "Baseline Results"
+format:
+  html:
+    toc: true
+    number-sections: true
+    colorlinks: true
+    self-contained: true
+warning: false
+---
+
+
+
+
+```{r}
+rm(list=ls())
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(lfe)
+library(fixest)
+library(stargazer)
+library(gridExtra)
+library(lmtest)
+library(simplermarkdown)
+library(DescTools)
+library(stringr)
+library(lubridate)
+library(purrr)
+library(xtable)
+
+tex_output=F
+
+
+# tryCatch({
+#   if(knitr::opts_knit$get("rmarkdown.pandoc.to")=="latex") {
+#     tex_output=T
+#   }
+# },error=function(e) {})
+
+save <- F
+
+
+options("scipen"=100, "digits"=4)
+
+source('https://raw.githubusercontent.com/dratnadiwakara/r-utilities/refs/heads/main/summary_stat_tables.R')
+```
+
+```{r}
+# library(quantmod)
+# cpi <- getSymbols("CPIAUCSL",src="FRED",auto.assign = F)
+# cpi <- data.table(date=index(cpi),CPI=coredata(cpi))
+# cpi <- cpi %>% mutate(year=year(date)) %>%
+#        group_by(year) %>%
+#       summarize(CPI=last(CPI.CPIAUCSL)) %>% ungroup() %>% data.table()
+# saveRDS(cpi,"../data/cpi.rds")
+cpi <- readRDS("../data/cpi.rds")
+cpi[,adj_ratio:=CPI/CPI[year==2024]]
+cpi[,asset_cutoff:=adj_ratio*100000000]
+
+```
+
+
+```{r}
+#| eval: true
+bank_chars <- readRDS('../data/sod-bank-chars-1987-2024.rds')
+bank_chars[, bank_assets := as.numeric(gsub(",", "", ASSET))]
+bank_chars <- merge(bank_chars,cpi[,c("year","asset_cutoff")],by.x="YEAR",by.y="year")
+large_banks <- unique(bank_chars[bank_assets>asset_cutoff]$RSSDID)
+
+
+
+branch_year <- readRDS('../data/sod-branch-year-1987-2024.rds')
+branch_year <- branch_year[RSSDID %in% bank_chars$RSSDID]
+# branch_year[,active_in_2012:= ifelse(UNINUMBR %in% unique(branch_year[YEAR==2007]$UNINUMBR),1,0)]
+branch_year <- branch_year[YEAR>=1998]
+branch_year <- merge(branch_year,bank_chars[,c("RSSDID","RSSDHCR","YEAR","bank_assets")],by=c("RSSDID","YEAR"))
+
+
+branch_chars <- readRDS('../data/sod-branch-chars-1987-2024.rds')
+
+branch_year <- merge(branch_year,branch_chars[,c("UNINUMBR","STCNTYBR","ZIPBR")],by=c("UNINUMBR"),all.x=T)
+setnames(branch_year,c("ZIPBR","YEAR"),c("zip","yr"))
+branch_year[,zip:=str_pad(zip,5,"left","0")]
+branch_year[,STCNTYBR:=str_pad(STCNTYBR,5,"left","0")]
+```
+
+
+```{r}
+# temp <- branch_year[yr %in% c(2010,2024)]
+# temp <- temp[,.(no_branches=.N),by=.(RSSDID,yr)]
+# temp <- dcast(temp,RSSDID~yr,value.var = "no_branches")
+# names(temp) <- c("RSSDID","st","ed")
+# temp[is.na(temp)] <- 0
+# temp[,gr:=(ed-st)/st]
+# temp <- temp[st>10 & ed>1]
+# 
+# t2 <- bank_chars[YEAR==2010,.(RSSDID,bank_assets)]
+# temp <- merge(temp,t2,by="RSSDID")
+# temp[,size:=floor(bank_assets/10000)]
+# 
+# t <- temp[,.(mean_gr=mean(gr,na.rm=T),.N),by=size]
+# ggplot(t[size %in% 900:1100],aes(x=size,y=mean_gr))+geom_point()
+```
+
+
+```{r}
+source('calculate_beta.R')
+```
+
+
+```{r}
+
+setFixest_fml(..ctrl_state_closure = ~ log(lag_branch_deposit_amount)+same_zip_prior_3yr_branches+legacy_branch+log(lag_bank_county_mortgage_volume)+log(lag_bank_county_cra_volume)+lag_county_deposit_gr+lag_hmda_mtg_amt_gr+lag_cra_loan_amount_amt_lt_1m_gr+lag_establishment_gr+lag_payroll_gr+lmi|state_yr+bank_yr,
+              ..ctrl_county_closure = ~ log(lag_branch_deposit_amount)+same_zip_prior_3yr_branches+legacy_branch+log(lag_bank_county_mortgage_volume)+log(lag_bank_county_cra_volume)|county_yr+bank_yr,
+              ..ctrl_state_closure_strip_down = ~ log(lag_branch_deposit_amount)|state_yr+bank_yr,
+              ..ctrl_county_closure_strip_down = ~ log(lag_branch_deposit_amount)|county_yr+bank_yr,
+              ..ctrl_state_opening = ~ log(zip_dep_amount)+lag_county_deposit_gr+lag_hmda_mtg_amt_gr+lag_cra_loan_amount_amt_lt_1m_gr+log(lag_county_mortgage_volume)+log(lag_county_cra_volume)+lag_establishment_gr+lag_payroll_gr+lmi|state_year+bank_year,
+              ..ctrl_county_opening = ~ log(zip_dep_amount)|county_year+bank_year,
+              ..ctrl_state_opening_strip_down = ~ log(zip_dep_amount)|state_year+bank_year,
+              ..ctrl_county_opening = ~ log(zip_dep_amount)|county_year+bank_year)
+
+
+
+
+covariate_labels_dict <-  c(df_per_dollar="DF per dollar",
+                            deposit_beta = "Deposit Beta",
+                            "log(lag_branch_deposit_amount)" = "log(Deposits)",
+                            same_zip_prior_3yr_branches = "Acq. branch/presence",
+                            legacy_branch = "Branch owned 3plus years",
+                            lag_county_deposit_gr="Deposit 3yr growth",
+                            lag_hmda_mtg_amt_gr="Mortgage 3yr growth",
+                            lag_cra_loan_amount_amt_lt_1m_gr="CRA 3yr growth",
+                            lag_establishment_gr="Establishments 3yr growth",
+                            lag_payroll_gr="Payroll 3yr growth",
+                            lmi="Low to Moderate Income Area",
+                            "log(zip_dep_amount)"="log(Zip code deposits)",
+                            lag_county_deposit_hhi="County deposit HHI",
+                            factor_age_bin2="Age Q1-Q2",
+                            factor_age_bin3="Age Q2-Q3",
+                            factor_age_bin4="Age >Q3",
+                            college_frac="College frac",
+                            "log(family_income)" = "log(Income)",
+                            dividend_frac = "Stock market frac",
+                            population_density = "Population density",
+                            sophisticated_ed_sm = "Sophisticated zipcode",
+                            change_visits = "Drop in visits",
+                            "log(distance_km)" = "log(Distance km)",
+                            "l_open"="Openings by other banks",
+                            "log(lag_bank_county_mortgage_volume)"="log(Bank-County Mortgage Volume)",
+                            "log(lag_bank_county_cra_volume)"="log(Bank-County CRA Volume)",
+                            "trans_accts_frac_assets"="Transaction Accounts/Assets",
+                            "ci_assets"="CI Lending/Assets",
+                            "uninsured_deposits_frac"="Uninsured Deposits/Deposits",
+                            "log(bank_assets)"="log(Assets)",
+                            "sophisticated_ed_sm_deposits_frac"="Frac of deposits in sophisticated zipcodes",
+                            "state_yr"="State times Year",
+                            "county_yr"="County times Year",
+                            "bank_yr" = "Bank times Year",
+                            "sophisticated"="Sophisticated zipcode",
+                            "log(lag_county_mortgage_volume)"="log(lag County Mortgage Vol)",
+                            "log(lag_county_cra_volume)"="log(lag County CRA Vol)")
+
+
+omit_controls <- as.vector(covariate_labels_dict)
+omit_controls <- sub("^log\\(","",omit_controls)
+omit_controls <- sub(")$","",omit_controls)
+
+
+yr_range <- list()
+yr_range[[1]] <- 2001:2007
+yr_range[[2]] <- 2008:2011
+yr_range[[3]] <- 2012:2019
+yr_range[[4]] <- 2020:2023
+
+reg_sample <- df[['reg_sample']]
+reg_sample[,large_bank:=ifelse(RSSDID %in% large_banks,1,0)]
+
+for(i in 1:length(cycles)) {
+  cycle <- cycles[[i]]
+  cycle_nm <- names(cycles)[i]
+  
+  reg_sample[,pred_int_exp_chg:=predict(cycle[['reg']],newdata = reg_sample)]
+  setnames(reg_sample,"pred_int_exp_chg",paste0("pred_int_exp_chg_",cycle_nm))
+}
+
+
+reg_sample[,deposit_beta:=ifelse(yr<=2014,pred_int_exp_chg_0406/cycles[[1]]$rate_chg,
+                                 ifelse(yr<=2019,pred_int_exp_chg_1619/cycles[[2]]$rate_chg,pred_int_exp_chg_2224/cycles[[3]]$rate_chg))]
+reg_sample[,df_per_dollar:=(1-deposit_beta)*(1-(1/(1.025)^10))]
+reg_sample[,log_deposits:=log1p(DEPSUMBR)]
+
+reg_sample[,lag_bank_county_cra_volume:=ifelse(is.na(lag_bank_county_cra_volume),1,lag_bank_county_cra_volume)]
+reg_sample[,lag_bank_county_mortgage_volume:=ifelse(is.na(lag_bank_county_mortgage_volume),1,lag_bank_county_mortgage_volume)]
+
+result_tables <- list()
+```
+
+
+# Table 1: Descriptive Statistics - Bank Level
+
+```{r}
+for(i in 1:length(cycles)) {
+  print(names(cycles)[[i]])
+  temp <- copy(cycles[[i]]$call_chg)
+  temp[,large_bank:=ifelse(ID_RSSD %in% large_banks,1,0)]
+  temp[,family_income:=floor(family_income/1000)]
+  
+  setnames(temp,
+           c("deposit_beta","age","college_frac","dividend_frac","family_income","sophisticated_ed_sm_deposits_frac","bank_hhi","population_density"),
+           new_names <- c("Deposit beta","Age","College educated fraction","Stock market participation frac","Family income (000)","Frac. deposits in sophisticated zipcodes","HHI","Deposit-weighted Pop. density"))
+  
+  print(table(temp$large_bank))
+  
+  temp1 <- summary_stats_function(temp[large_bank==1],new_names)
+  temp1 <- temp1 %>% select(-P25,-P50,-P75,-Obs)
+  
+  temp2 <- summary_stats_function(temp[large_bank==0],new_names)
+  temp2 <- temp2 %>% select(-P25,-P50,-P75,-Obs)
+  
+  result_tables[[paste0('bank_stats_',names(cycles)[[i]])]] <- merge(temp1,temp2,by="Variable")
+  
+  print(xtable(result_tables[[paste0('bank_stats_',names(cycles)[[i]])]]),table.placement=NULL,floating=F,include.rownames=F,comment=F,scalebox = 0.8, latex.environments = "center")
+}
+```
+
+
+
+# Table 2: Bank-Level Deposit Beta
+```{r}
+etable(cycles[[1]][['reg']],cycles[[2]][['reg']],cycles[[3]][['reg']],
+       cycles[[1]][['reg_sophisticated']],cycles[[2]][['reg_sophisticated']],cycles[[3]][['reg_sophisticated']],
+       se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       headers = list("Early Cycle"=1,"Mid Cycle"=1,"Late Cycle"=1,"Early Cycle"=1,"Mid Cycle"=1,"Late Cycle"=1),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("College frac","Stock market frac","Frac of deposits in sophisticated zipcodes"))
+```
+
+
+# Figure 3: Deposit Beta
+
+## Bank-Level
+
+```{r}
+beta_density <- data.table()
+for(i in 1:length(cycles)) {
+  cycle_nm <- names(cycles)[[i]]
+  cycle <- cycles[[i]]
+  temp <- cycle$call_chg[,.(ID_RSSD,deposit_beta)]
+  temp[,large_bank:=ifelse(ID_RSSD %in% large_banks,1,0)]
+  temp[,cycle:=cycle_nm]
+  beta_density <- rbind(beta_density,temp)
+}
+
+g <- ggplot(beta_density,aes(x=deposit_beta,fill=factor(large_bank)))+geom_density(alpha=0.5)+
+  facet_wrap(~cycle,labeller = as_labeller(c("0406"="Early Cycle","1619"="Mid Cycle","2224"="Late Cycle")))+
+  scale_x_continuous(n.breaks = 4)+
+  scale_fill_manual(
+        values = c("1"="dodgerblue4",
+                   "0" = "tan2"
+                   ),
+        labels = c("1"="Large banks",
+                   "0" = "Small banks")
+      )+
+  labs(x="",y="")+
+  theme_minimal()+
+  theme(legend.title = element_blank(),legend.position = "bottom",axis.text.y = element_blank(),
+        panel.spacing = unit(2,"lines"),
+        strip.text = element_text(face="bold"))
+if(save==T) {
+ggsave("figures/beta_density_bank.jpg",g,width = 5,height = 3)
+} else {
+print(g)
+}
+```
+
+## Branch-Level
+
+```{r}
+beta_density <- reg_sample[,.(deposit_beta=mean(deposit_beta,na.rm=T)),by=.(rate_cycle,large_bank,UNINUMBR)]
+beta_density[,`:=`(
+  q1 = quantile(deposit_beta, probs = 0.001, na.rm = TRUE),
+  q2 = quantile(deposit_beta, probs = 0.999, na.rm = TRUE)
+), by = rate_cycle]
+
+beta_density[,deposit_beta:=ifelse(deposit_beta<q1,q1,ifelse(deposit_beta>q2,q2,deposit_beta))]
+
+g <- ggplot(beta_density,aes(x=deposit_beta,fill=factor(large_bank)))+geom_density(alpha=0.5)+
+  facet_wrap(~rate_cycle,labeller = as_labeller(c("1early"="Early Cycle","2mid"="Mid Cycle","3late"="Late Cycle")))+
+  scale_x_continuous(n.breaks = 4)+
+  scale_fill_manual(
+        values = c("1"="dodgerblue4",
+                   "0" = "tan2"
+                   ),
+        labels = c("1"="Large banks",
+                   "0" = "Small banks")
+      )+
+  labs(x="",y="")+
+  theme_minimal()+
+  theme(legend.title = element_blank(),legend.position = "bottom",axis.text.y = element_blank(),
+        panel.spacing = unit(2,"lines"),
+        strip.text = element_text(face="bold"))
+
+if(save==T) {
+ggsave("figures/beta_density_branch.jpg",g,width = 5,height = 3)
+} else {
+print(g)
+}
+```
+
+
+
+# Figure 4: Beta Correlations 
+
+## Branch Level
+```{r}
+temp <- reg_sample[yr %in% 2019:2020,c("UNINUMBR","yr","deposit_beta","large_bank")]
+temp <- dcast(temp,UNINUMBR+large_bank~yr,value.var = "deposit_beta",fun.aggregate = mean)
+names(temp) <- c("UNINUMBR","large_bank","cycle1619","cycle2224")
+
+g <- ggplot(temp[cycle1619>0.08 & cycle1619<0.4],aes(x=cycle1619,y=cycle2224))+geom_point(aes(color=factor(large_bank)),alpha=0.2)+geom_smooth(method="lm")+
+  geom_abline(intercept = 0,slope = 1,linetype="dashed")+
+  scale_color_manual(
+        values = c("1"="dodgerblue4",
+                   "0" = "tan2"
+                   ),
+        labels = c("1"="Large banks",
+                   "0" = "Small banks")
+      )+
+  labs(x="Deposit Beta - Mid Cycle",y="Deposit Beta - Late Cycle")+
+  theme_minimal()+
+  theme(legend.position = "bottom",legend.title =  element_blank())
+
+if(save==T) {
+  ggsave("figures/df_scatter_branch_mid_late.jpg",g,width = 4,height = 3.5)
+}  else {
+print(g)
+}
+
+```
+
+```{r}
+temp <- reg_sample[yr %in% c(2006,2019) & is.finite(deposit_beta),c("UNINUMBR","yr","deposit_beta","large_bank")]
+temp <- dcast(temp,UNINUMBR+large_bank~yr,value.var = "deposit_beta",fun.aggregate = mean)
+names(temp) <- c("UNINUMBR","large_bank","cycle0406","cycle1619")
+
+g <- ggplot(temp,aes(x=cycle0406,y=cycle1619))+geom_point(aes(color=factor(large_bank)),alpha=0.2)+geom_smooth(method="lm")+
+  geom_abline(intercept = 0,slope = 1,linetype="dashed")+
+  scale_color_manual(
+        values = c("1"="dodgerblue4",
+                   "0" = "tan2"
+                   ),
+        labels = c("1"="Large banks",
+                   "0" = "Small banks")
+      )+
+  labs(x="Deposit Beta - Early Cycle",y="Deposit Beta - Mid Cycle")+
+  theme_minimal()+
+  theme(legend.position = "bottom",legend.title =  element_blank())
+
+if(save==T) {
+  ggsave("figures/df_scatter_branch_early_mid.jpg",g,width = 4,height = 3.5)
+}  else {
+print(g)
+}
+```
+
+
+## Bank Level
+```{r}
+beta_density <- data.table()
+for(i in 1:length(cycles)) {
+  cycle_nm <- names(cycles)[[i]]
+  cycle <- cycles[[i]]
+  temp <- cycle$call_chg[,.(ID_RSSD,deposit_beta)]
+  temp[,large_bank:=ifelse(ID_RSSD %in% large_banks,1,0)]
+  temp[,cycle:=cycle_nm]
+  beta_density <- rbind(beta_density,temp)
+}
+
+beta_density <- dcast(beta_density,ID_RSSD+large_bank~cycle,value.var = "deposit_beta",fun.aggregate = mean)
+beta_density <- beta_density[complete.cases(beta_density)]
+setnames(beta_density,c("0406","1619","2224"),c("early","mid","late"))
+
+
+g1 <- ggplot(beta_density,aes(x=early,y=mid))+geom_point(aes(color=factor(large_bank),size=factor(large_bank)),alpha=0.5)+geom_smooth(method="lm")+
+  geom_abline(intercept = 0,slope = 1,linetype="dashed")+
+    scale_size_manual(
+            values = c("1"=2,
+                   "0" = 1
+                   ),
+        labels = c("1"="Large banks",
+                   "0" = "Small banks")
+  )+
+  scale_color_manual(
+        values = c("1"="dodgerblue4",
+                   "0" = "tan2"
+                   ),
+        labels = c("1"="Large banks",
+                   "0" = "Small banks")
+      )+
+  labs(x="Deposit Beta - Early Cycle",y="Deposit Beta - Mid Cycle")+
+  theme_minimal()+
+  theme(legend.position = "bottom",legend.title =  element_blank())
+
+
+if(save==T) {
+  ggsave("figures/df_scatter_bank_early_mid.jpg",g1,width = 4,height = 3.5)
+}  else {
+print(g)
+}
+
+g2 <- ggplot(beta_density,aes(x=mid,y=late))+geom_point(aes(color=factor(large_bank),size=factor(large_bank)),alpha=0.5)+geom_smooth(method="lm")+
+  geom_abline(intercept = 0,slope = 1,linetype="dashed")+
+    scale_size_manual(
+            values = c("1"=2,
+                   "0" = 1
+                   ),
+        labels = c("1"="Large banks",
+                   "0" = "Small banks")
+  )+
+  scale_color_manual(
+        values = c("1"="dodgerblue4",
+                   "0" = "tan2"
+                   ),
+        labels = c("1"="Large banks",
+                   "0" = "Small banks")
+      )+
+  labs(x="Deposit Beta - Mid Cycle",y="Deposit Beta - Late Cycle")+
+  theme_minimal()+
+  theme(legend.position = "bottom",legend.title =  element_blank())
+
+
+if(save==T) {
+  ggsave("figures/df_scatter_bank_mid_late.jpg",g2,width = 4,height = 3.5)
+}  else {
+print(g)
+}
+```
+
+
+# Figure 6: Deposit Beta and Branch Closure
+
+## Branch-Level - not within bank
+```{r}
+temp <- copy(reg_sample)
+temp[,cycle:=ifelse(yr>=2020,1,ifelse(yr>=2014,2,3))]
+temp[,beta_q:=ntile(deposit_beta,10),by=.(yr)]
+
+temp1 <- temp[yr %in% 2020:2023,.(frac_branches_closed=mean(closed)),by=beta_q]
+temp1[,cycle:="Late Cycle"]
+
+temp2 <- temp[yr %in% 2015:2019,.(frac_branches_closed=mean(closed,na.rm=T)),by=beta_q]
+temp2[,cycle:="Mid Cycle"]
+
+
+temp3 <- temp[yr %in% 2001:2014,.(frac_branches_closed=mean(closed,na.rm=T)),by=beta_q]
+temp3[,cycle:="Early Cycle"]
+
+
+temp <- rbind(temp1,temp2,temp3)
+temp[,frac_branches_closed:=Winsorize(frac_branches_closed, quantile(frac_branches_closed, probs=c(0.05, 0.95), na.rm = TRUE)),by=.(beta_q,cycle)]
+
+
+g <- ggplot(temp,aes(x=beta_q,y=frac_branches_closed*100,color=cycle))+geom_point(size=3,alpha=0.75,aes(shape=cycle))+
+  scale_x_continuous(n.breaks = 10)+
+   scale_color_manual(
+        values = c("Late Cycle"="dodgerblue4",
+                   "Mid Cycle" = "tan2",
+                   "Early Cycle" = "gray"
+                   )
+      )+
+  ylim(c(1,6))+
+  theme_minimal()+
+  labs(x="Deposit Beta Decile",y="Percent of branches closed (%)")+
+   theme(legend.position = "bottom",legend.title =  element_blank())
+
+if(save==T) {
+  ggsave("figures/univar_branch.jpg",g,width = 5,height = 3.5)
+}  else {
+print(g)
+}
+```
+
+## Branch-Level - within bank
+```{r}
+temp <- copy(reg_sample)
+temp[,no_branches:=.N,by=.(RSSDID,yr)]
+temp[,cycle:=ifelse(yr>=2020,1,ifelse(yr>=2014,2,3))]
+temp[,beta_q:=ntile(deposit_beta,10),by=.(RSSDID,yr)]
+
+temp1 <- temp[yr %in% 2020:2023 & no_branches>10,.(frac_branches_closed=mean(closed)),by=beta_q]
+temp1[,cycle:="Late Cycle"]
+
+temp2 <- temp[yr %in% 2015:2019 & no_branches>10,.(frac_branches_closed=mean(closed,na.rm=T)),by=beta_q]
+temp2[,cycle:="Mid Cycle"]
+
+
+temp3 <- temp[yr %in% 2001:2014 & no_branches>10,.(frac_branches_closed=mean(closed,na.rm=T)),by=beta_q]
+temp3[,cycle:="Early Cycle"]
+
+
+temp <- rbind(temp1,temp2,temp3)
+temp[,frac_branches_closed:=Winsorize(frac_branches_closed, quantile(frac_branches_closed, probs=c(0.05, 0.95), na.rm = TRUE)),by=.(beta_q,cycle)]
+
+g <- ggplot(temp,aes(x=beta_q,y=frac_branches_closed*100,color=cycle))+geom_point(size=3,alpha=0.75,aes(shape=cycle))+
+  scale_x_continuous(n.breaks = 10)+
+   scale_color_manual(
+        values = c("Late Cycle"="dodgerblue4",
+                   "Mid Cycle" = "tan2",
+                   "Early Cycle" = "gray"
+                   )
+      )+
+  ylim(c(1.5,5.1))+
+  theme_minimal()+
+  labs(x="Deposit Beta Decile",y="Percent of branches closed (%)")+
+   theme(legend.position = "bottom",legend.title =  element_blank())
+
+if(save==T) {
+  ggsave("figures/univar_branch.jpg",g,width = 5,height = 3.5)
+}  else {
+print(g)
+}
+```
+
+```{r}
+bank_chars <- readRDS('../data/sod-bank-chars-1987-2024.rds')
+bank_chars[, bank_assets := as.numeric(gsub(",", "", ASSET))]
+
+#| eval: true
+branch_year <- readRDS('../data/sod-branch-year-1987-2024.rds')
+branch_year <- branch_year[RSSDID %in% bank_chars$RSSDID]
+branch_year <- merge(branch_year,bank_chars[,c("RSSDID","RSSDHCR","YEAR","bank_assets")],by=c("RSSDID","YEAR"))
+
+
+branch_chars <- readRDS('../data/sod-branch-chars-1987-2024.rds')
+
+branch_year <- merge(branch_year,branch_chars[,c("UNINUMBR","STCNTYBR","ZIPBR")],by=c("UNINUMBR"),all.x=T)
+setnames(branch_year,c("ZIPBR","YEAR"),c("zip","yr"))
+branch_year[,zip:=str_pad(zip,5,"left","0")]
+branch_year[,STCNTYBR:=str_pad(STCNTYBR,5,"left","0")]
+
+
+closure_data <- branch_year[yr %in% 2001:2024] %>%
+                arrange(UNINUMBR,yr) %>%
+                group_by(UNINUMBR) %>%
+                mutate(
+                  next_year = lead(yr),
+                  closed = ifelse(is.na(next_year) & yr<2024,1,0),
+                  keep = lag(cumsum(closed == 1),default=0)<=0 # no prior closed==1 based on cumulative history
+                ) %>% filter(keep) %>%
+                select(-keep,-next_year) %>%
+                ungroup() %>% data.table()
+
+
+
+beta_density <- data.table()
+for(i in 1:length(cycles)) {
+  cycle_nm <- names(cycles)[[i]]
+  cycle <- cycles[[i]]
+  temp <- cycle$call_chg[,.(ID_RSSD,deposit_beta)]
+  temp[,large_bank:=ifelse(ID_RSSD %in% large_banks,1,0)]
+  temp[,cycle:=cycle_nm]
+  beta_density <- rbind(beta_density,temp)
+}
+beta_density <- dcast(beta_density,ID_RSSD+large_bank~cycle,value.var = "deposit_beta",fun.aggregate = mean)
+beta_density <- beta_density[complete.cases(beta_density)]
+setnames(beta_density,c("0406","1619","2224"),c("early","mid","late"))
+beta_density[,early_bin:=ntile(early,10)]
+beta_density[,mid_bin:=ntile(mid,10)]
+beta_density[,late_bin:=ntile(late,10)]
+
+# bank_sample_22_24 <- df[['bank_sample_22_24']][,c("ID_RSSD","deposit_beta")]
+# bank_sample_22_24[,df_per_dollar_late:=(1-deposit_beta)*(1-(1/(1.025)^10))]
+# bank_sample_22_24[,df_per_dollar_late_q:=ntile(df_per_dollar_late,10)]
+# 
+# 
+# bank_sample_16_19 <- df[['bank_sample_16_19']][,c("ID_RSSD","deposit_beta")]
+# bank_sample_16_19[,df_per_dollar_mid:=(1-deposit_beta)*(1-(1/(1.025)^10))]
+# bank_sample_16_19[,df_per_dollar_mid_q:=ntile(df_per_dollar_mid,10)]
+# 
+# 
+# bank_sample_04_06 <- df[['bank_sample_04_06']][,c("ID_RSSD","deposit_beta")]
+# bank_sample_04_06[,df_per_dollar_early:=(1-deposit_beta)*(1-(1/(1.025)^10))]
+# bank_sample_04_06[,df_per_dollar_early_q:=ntile(df_per_dollar_early,10)]
+# 
+# 
+# bank_sample <- merge(bank_sample_22_24,bank_sample_16_19,by="ID_RSSD",all.x=T,all.y=T)
+# bank_sample <- merge(bank_sample,bank_sample_04_06,by="ID_RSSD",all.x=T,all.y=T)
+
+
+
+closure_data <- merge(closure_data,beta_density,by.x="RSSDID",by.y="ID_RSSD")
+
+
+
+temp1 <- closure_data[yr %in% 2020:2023,.(frac_branches_closed=mean(closed)),by=late_bin]
+temp1[,cycle:="Late Cycle"]
+setnames(temp1,"late_bin","beta_bin")
+temp2 <- closure_data[yr %in% 2015:2019,.(frac_branches_closed=mean(closed,na.rm=T)),by=mid_bin]
+temp2[,cycle:="Mid Cycle"]
+setnames(temp2,"mid_bin","beta_bin")
+temp3 <- closure_data[yr %in% 2001:2014,.(frac_branches_closed=mean(closed,na.rm=T)),by=early_bin]
+temp3[,cycle:="Early Cycle"]
+setnames(temp3,"early_bin","beta_bin")
+
+temp <- rbind(temp1,temp2,temp3)
+g <- ggplot(temp,aes(x=beta_bin,y=frac_branches_closed*100,color=cycle))+geom_point(size=3,alpha=0.75,aes(shape=cycle))+
+  scale_x_continuous(n.breaks = 10)+
+   scale_color_manual(
+        values = c("Late Cycle"="dodgerblue4",
+                   "Mid Cycle" = "tan2",
+                   "Early Cycle" = "gray"
+                   )
+      )+
+  theme_minimal()+
+  labs(x="Deposit Beta decile",y="Percent of branches closed (%)")+
+   theme(legend.position = "bottom",legend.title =  element_blank())
+
+if(save==T) {
+  ggsave("figures/univar_bank.jpg",g,width = 5,height = 3.5)
+}  else {
+print(g)
+}
+```
+
+
+# Table 4: Descriptive Statistics for Branch Closure Sample
+
+## Large Banks
+```{r}
+temp <- copy(reg_sample[is.finite(deposit_beta)])
+temp[,lag_branch_deposit_amount:=floor(lag_branch_deposit_amount/1000)]
+
+
+setnames(temp,
+         c("closed","deposit_beta","lag_branch_deposit_amount","log_deposits","lag_county_deposit_gr","lag_hmda_mtg_amt_gr","lag_cra_loan_amount_amt_lt_1m_gr","lag_establishment_gr","lag_payroll_gr","same_zip_prior_3yr_branches","legacy_branch","population_density","lmi"),
+         new_names <- c("Closed","Deposit Beta","Deposits (mn)","Deposits - log","Deposit 3yr growth","Mortgage 3yr growth","CRA 3yr growth","Establishments 3yr growth","Payroll 3yr growth","Acq. branch/presence","Branch owned 3plus years","Population density (1k km)","Low to Moderate Income Area"))
+
+temp1 <- summary_stats_function(temp[large_bank==1 & yr==2020],new_names)
+temp1 <- temp1 %>% select(-P25,-P50,-P75,-Obs)%>% data.table
+temp1[,SD2:=SD]
+temp1 <- temp1[,.(Variable,Mean,SD,SD2,P10,P90)]
+
+
+temp2 <- summary_stats_function(temp[large_bank==1 & yr==2019],new_names)
+temp2 <- temp2 %>% select(-P25,-P50,-P75,-Obs)  %>% data.table
+temp2[,SD2:=SD]
+temp2 <- temp2[,.(Variable,Mean,SD,SD2,P10,P90)]
+
+result_tables[['desc_stats_large_banks']] <- merge(temp1,temp2,by="Variable")
+
+variable_order <- c('Closed','Deposit Beta','Deposits (mn)','Deposits - log','Deposit 3yr growth','Acq. branch/presence','Branch owned 3plus years','CRA 3yr growth','Establishments 3yr growth','Low to Moderate Income Area','Mortgage 3yr growth','Payroll 3yr growth','Population density (1k km)')
+
+result_tables[['desc_stats_large_banks']] <- result_tables[['desc_stats_large_banks']][order(factor(Variable, levels = variable_order))]
+result_tables[['desc_stats_large_banks']]$SD2.x <- NA
+result_tables[['desc_stats_large_banks']]$SD2.y <- NA
+print(xtable(result_tables[['desc_stats_large_banks']]),table.placement=NULL,floating=F,include.rownames=F,comment=F,scalebox = 0.8, latex.environments = "center")
+md_table(result_tables[['desc_stats_large_banks']])
+```
+
+## Small Banks
+```{r}
+temp <- copy(reg_sample[is.finite(deposit_beta)])
+temp[,lag_branch_deposit_amount:=floor(lag_branch_deposit_amount/1000)]
+
+
+setnames(temp,
+         c("closed","deposit_beta","lag_branch_deposit_amount","log_deposits","lag_county_deposit_gr","lag_hmda_mtg_amt_gr","lag_cra_loan_amount_amt_lt_1m_gr","lag_establishment_gr","lag_payroll_gr","same_zip_prior_3yr_branches","legacy_branch","population_density","lmi"),
+         new_names <- c("Closed","Deposit Beta","Deposits (mn)","Deposits - log","Deposit 3yr growth","Mortgage 3yr growth","CRA 3yr growth","Establishments 3yr growth","Payroll 3yr growth","Acq. branch/presence","Branch owned 3plus years","Population density (1k km)","Low to Moderate Income Area"))
+
+temp1 <- summary_stats_function(temp[large_bank==0 & yr==2019],new_names)
+temp1 <- temp1 %>% select(-P25,-P50,-P75,-Obs)%>% data.table
+temp1[,SD2:=SD]
+temp1 <- temp1[,.(Variable,Mean,SD,SD2,P10,P90)]
+
+
+temp2 <- summary_stats_function(temp[large_bank==0 & yr==2012],new_names)
+temp2 <- temp2 %>% select(-P25,-P50,-P75,-Obs)  %>% data.table
+temp2[,SD2:=SD]
+temp2 <- temp2[,.(Variable,Mean,SD,SD2,P10,P90)]
+
+result_tables[['desc_stats_small_banks']] <- merge(temp1,temp2,by="Variable")
+
+result_tables[['desc_stats_small_banks']] <- result_tables[['desc_stats_small_banks']][order(factor(Variable, levels = variable_order))]
+result_tables[['desc_stats_small_banks']]$SD2.x <- NA
+result_tables[['desc_stats_small_banks']]$SD2.y <- NA
+print(xtable(result_tables[['desc_stats_small_banks']]),table.placement=NULL,floating=F,include.rownames=F,comment=F,scalebox = 0.8, latex.environments = "center")
+md_table(result_tables[['desc_stats_small_banks']])
+```
+
+
+
+## Within FE SD
+
+```{r}
+temp_df <- copy(reg_sample[is.finite(deposit_beta) & yr==2019 & large_bank==1])
+
+reg <- feols(deposit_beta~0|county_yr+bank_yr,temp_df)
+temp_df[,pred_deposit_beta:=predict(reg,newdata=temp_df)]
+temp_df[,resid_deposit_beta:=deposit_beta-pred_deposit_beta]
+
+reg <- feols(log_deposits~0|county_yr+bank_yr,temp_df)
+temp_df[,pred_log_deposits:=predict(reg,newdata=temp_df)]
+temp_df[,resid_log_deposits:=log_deposits-pred_log_deposits]
+
+sd(temp_df$resid_deposit_beta,na.rm = T)
+sd(temp_df$resid_log_deposits,na.rm = T)
+
+
+
+temp_df <- copy(reg_sample[is.finite(deposit_beta) & yr==2012 & large_bank==1])
+
+reg <- feols(deposit_beta~0|county_yr+bank_yr,temp_df)
+temp_df[,pred_deposit_beta:=predict(reg,newdata=temp_df)]
+temp_df[,resid_deposit_beta:=deposit_beta-pred_deposit_beta]
+
+reg <- feols(log_deposits~0|county_yr+bank_yr,temp_df)
+temp_df[,pred_log_deposits:=predict(reg,newdata=temp_df)]
+temp_df[,resid_log_deposits:=log_deposits-pred_log_deposits]
+
+sd(temp_df$resid_deposit_beta,na.rm = T)
+sd(temp_df$resid_log_deposits,na.rm = T)
+
+
+
+temp_df <- copy(reg_sample[is.finite(deposit_beta) & yr==2019 & large_bank==0])
+
+reg <- feols(deposit_beta~0|county_yr+bank_yr,temp_df)
+temp_df[,pred_deposit_beta:=predict(reg,newdata=temp_df)]
+temp_df[,resid_deposit_beta:=deposit_beta-pred_deposit_beta]
+
+reg <- feols(log_deposits~0|county_yr+bank_yr,temp_df)
+temp_df[,pred_log_deposits:=predict(reg,newdata=temp_df)]
+temp_df[,resid_log_deposits:=log_deposits-pred_log_deposits]
+
+sd(temp_df$resid_deposit_beta,na.rm = T)
+sd(temp_df$resid_log_deposits,na.rm = T)
+
+
+temp_df <- copy(reg_sample[is.finite(deposit_beta) & yr==2012 & large_bank==0])
+
+reg <- feols(deposit_beta~0|county_yr+bank_yr,temp_df)
+temp_df[,pred_deposit_beta:=predict(reg,newdata=temp_df)]
+temp_df[,resid_deposit_beta:=deposit_beta-pred_deposit_beta]
+
+reg <- feols(log_deposits~0|county_yr+bank_yr,temp_df)
+temp_df[,pred_log_deposits:=predict(reg,newdata=temp_df)]
+temp_df[,resid_log_deposits:=log_deposits-pred_log_deposits]
+
+sd(temp_df$resid_deposit_beta,na.rm = T)
+sd(temp_df$resid_log_deposits,na.rm = T)
+```
+
+
+```{r}
+#| results: asis
+
+df <- copy(reg_sample)
+
+reg <- feols(deposit_beta~0|county_yr+bank_yr,df)
+df[,pred_df_per_dollar:=predict(reg,newdata=df)]
+df[,resid_df_per_dollar:=deposit_beta-pred_df_per_dollar]
+
+reg <- feols(log_deposits~0|county_yr+bank_yr,df)
+df[,pred_log_deposits:=predict(reg,newdata=df)]
+df[,resid_log_deposits:=log_deposits-pred_log_deposits]
+
+reg <- feols(same_zip_prior_3yr_branches~0|county_yr+bank_yr,df)
+df[,pred_same_zip_prior_3yr_branches:=predict(reg,newdata=df)]
+df[,resid_same_zip_prior_3yr_branches:=same_zip_prior_3yr_branches-pred_same_zip_prior_3yr_branches]
+
+reg <- feols(legacy_branch~0|county_yr+bank_yr,df)
+df[,pred_legacy_branch:=predict(reg,newdata=df)]
+df[,resid_legacy_branch:=legacy_branch-pred_legacy_branch]
+
+
+
+sd(df[yr==2019 & large_bank==1 & is.finite(resid_df_per_dollar)]$resid_df_per_dollar,na.rm = T)
+sd(df[yr==2019 & large_bank==1]$resid_log_deposits,na.rm = T)
+sd(df[yr==2019 & large_bank==1]$resid_same_zip_prior_3yr_branches,na.rm = T)
+sd(df[yr==2019 & large_bank==1]$resid_legacy_branch,na.rm = T)
+
+
+sd(df[yr==2012 & large_bank==1 & is.finite(resid_df_per_dollar)]$resid_df_per_dollar,na.rm = T)
+sd(df[yr==2012 & large_bank==1]$resid_log_deposits,na.rm = T)
+sd(df[yr==2012 & large_bank==1]$resid_same_zip_prior_3yr_branches,na.rm = T)
+sd(df[yr==2012 & large_bank==1]$resid_legacy_branch,na.rm = T)
+
+
+sd(df[yr==2019 & large_bank==0 & is.finite(resid_df_per_dollar)]$resid_df_per_dollar,na.rm = T)
+sd(df[yr==2019 & large_bank==0]$resid_log_deposits,na.rm = T)
+sd(df[yr==2019 & large_bank==0]$resid_same_zip_prior_3yr_branches,na.rm = T)
+sd(df[yr==2019 & large_bank==0]$resid_legacy_branch,na.rm = T)
+
+
+sd(df[yr==2012 & large_bank==0 & is.finite(resid_df_per_dollar)]$resid_df_per_dollar,na.rm = T)
+sd(df[yr==2012 & large_bank==0]$resid_log_deposits,na.rm = T)
+sd(df[yr==2012 & large_bank==0]$resid_same_zip_prior_3yr_branches,na.rm = T)
+sd(df[yr==2012 & large_bank==0]$resid_legacy_branch,na.rm = T)
+```
+# Baseline Closure Model
+
+```{r}
+result_tables[['closed_full']] <- list(
+          feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample,vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample,vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample[large_bank==1],vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample[large_bank==1],vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample[large_bank==0],vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample[large_bank==0],vcov = ~RSSDID)
+)
+```
+```{r}
+mean(reg_sample$closed,na.rm=T)
+mean(reg_sample[large_bank==1]$closed,na.rm=T)
+mean(reg_sample[large_bank==0]$closed,na.rm=T)
+```
+
+```{r}
+#| results: asis
+etable(result_tables[['closed_full']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),headers = list("All banks"=2,"Large banks"=2,"Small banks"=2),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = tex_output,
+       style.tex = style.tex("aer"),
+       order=c("DF per dollar","Deposit Beta"))
+```
+
+```{r}
+# closure: log(lag_branch_deposit_amount)+same_zip_prior_3yr_branches+legacy_branch+log(lag_bank_county_mortgage_volume)+log(lag_bank_county_cra_volume)+lag_county_deposit_gr+lag_hmda_mtg_amt_gr+lag_cra_loan_amount_amt_lt_1m_gr+lag_establishment_gr+lag_payroll_gr+lmi|state_yr+bank_yr
+# opening: log(zip_dep_amount)+lag_county_deposit_gr+lag_hmda_mtg_amt_gr+lag_cra_loan_amount_amt_lt_1m_gr+log(lag_county_mortgage_volume)+log(lag_county_cra_volume)+lag_establishment_gr+lag_payroll_gr+lmi|state_year+bank_year
+df_wald <- wald(result_tables[['closed_full']][[1]],c("deposit_beta","lag_branch_deposit_amount"))
+df_wald <- df_wald[[1]]
+print(df_wald)
+
+lending_wald <- wald(result_tables[['closed_full']][[1]],c("lag_bank_county_mortgage_volume","lag_bank_county_cra_volume","lag_hmda_mtg_amt_gr","lag_cra_loan_amount_amt_lt_1m_gr"))
+lending_wald <- lending_wald[[1]]
+print(lending_wald)
+```
+
+
+# Stripped Down Closure Model
+
+```{r}
+result_tables[['closed_full_strip_down']] <- list(
+          feols(closed~deposit_beta+..ctrl_state_closure_strip_down,data=reg_sample,vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_county_closure_strip_down,data=reg_sample,vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_state_closure_strip_down,data=reg_sample[large_bank==1],vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_county_closure_strip_down,data=reg_sample[large_bank==1],vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_state_closure_strip_down,data=reg_sample[large_bank==0],vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_county_closure_strip_down,data=reg_sample[large_bank==0],vcov = ~RSSDID)
+)
+```
+
+```{r}
+#| results: asis
+etable(result_tables[['closed_full_strip_down']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),headers = list("All banks"=2,"Large banks"=2,"Small banks"=2),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = tex_output,
+       style.tex = style.tex("aer"),
+       order=c("DF per dollar","Deposit Beta"))
+```
+
+# Reduced Form Pooled Closure Model
+
+
+
+
+```{r}
+result_tables[['closed_rf']] <- list(
+  feols(closed~college_frac+log(family_income)+dividend_frac+factor_age_bin+lag_county_deposit_hhi+population_density+ ..ctrl_state_closure,
+        data=reg_sample[!is.na(deposit_beta)],vcov = ~RSSDID),
+  feols(closed~college_frac+log(family_income)+dividend_frac+factor_age_bin+..ctrl_county_closure,
+        data=reg_sample[!is.na(deposit_beta)],vcov = ~RSSDID),
+  feols(closed~factor_age_bin+log(family_income)+sophisticated_ed_sm+lag_county_deposit_hhi+population_density+..ctrl_state_closure,
+        data=reg_sample[!is.na(deposit_beta)],vcov = ~RSSDID),
+  feols(closed~factor_age_bin+log(family_income)+sophisticated_ed_sm+..ctrl_county_closure,
+        data=reg_sample[!is.na(deposit_beta)],vcov = ~RSSDID)
+
+)
+
+result_tables[['closed_rf_by_size']] <- list(
+  feols(closed~college_frac+log(family_income)+dividend_frac+factor_age_bin+lag_county_deposit_hhi+population_density+..ctrl_state_closure,
+        data=reg_sample[large_bank==1 & !is.na(deposit_beta)],vcov = ~RSSDID),
+  feols(closed~college_frac+log(family_income)+dividend_frac+factor_age_bin+..ctrl_county_closure,
+        data=reg_sample[large_bank==1 & !is.na(deposit_beta)],vcov = ~RSSDID),
+  feols(closed~college_frac+log(family_income)+dividend_frac+factor_age_bin+lag_county_deposit_hhi+population_density+..ctrl_state_closure,
+        data=reg_sample[large_bank==0 & !is.na(deposit_beta)],vcov = ~RSSDID),
+  feols(closed~college_frac+log(family_income)+dividend_frac+factor_age_bin+..ctrl_county_closure,
+        data=reg_sample[large_bank==0 & !is.na(deposit_beta)]),
+  feols(closed~factor_age_bin+log(family_income)+sophisticated_ed_sm+lag_county_deposit_hhi+population_density+..ctrl_state_closure,
+        data=reg_sample[large_bank==1 & !is.na(deposit_beta)],vcov = ~RSSDID),
+  feols(closed~factor_age_bin+log(family_income)+sophisticated_ed_sm+..ctrl_county_closure,
+        data=reg_sample[large_bank==1 & !is.na(deposit_beta)],vcov = ~RSSDID),
+  feols(closed~factor_age_bin+log(family_income)+sophisticated_ed_sm+lag_county_deposit_hhi+population_density+..ctrl_state_closure,
+        data=reg_sample[large_bank==0 & !is.na(deposit_beta)],vcov = ~RSSDID),
+  feols(closed~factor_age_bin+log(family_income)+sophisticated_ed_sm+..ctrl_county_closure,
+        data=reg_sample[large_bank==0 & !is.na(deposit_beta)],vcov = ~RSSDID)
+)
+
+```
+```{r}
+etable(result_tables[['closed_rf']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+              depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("College frac","Stock market frac","Sophisticated zipcode","Income","Age Q1-Q2","Age Q2-Q3","Age >Q3"),
+       group=list(Controls=omit_controls[!omit_controls %in% c("College frac","Stock market frac","Sophisticated zipcode","Age Q1-Q2","Age Q2-Q3","Age >Q3","Income","County deposit HHI","Population density","Deposits")]))
+```
+```{r}
+#| results: asis
+etable(result_tables[['closed_rf_by_size']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("College frac","Stock market frac","Sophisticated zipcode","Income","Age Q1-Q2","Age Q2-Q3","Age >Q3"), group=list(Controls=omit_controls[!omit_controls %in% c("Sophisticated zipcode","Age Q1-Q2","Age Q2-Q3","Age >Q3","Income","College frac","Stock market frac","County deposit HHI","Population density","Deposits")]))
+```
+
+
+# Closures by Regime
+
+```{r}
+result_tables[['closed_large_by_cycle']] <- list(
+        feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample[large_bank==1 & yr %in% yr_range[[1]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample[large_bank==1 & yr %in% yr_range[[1]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample[large_bank==1 & yr %in% yr_range[[2]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample[large_bank==1 & yr %in% yr_range[[2]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample[large_bank==1 & yr %in% yr_range[[3]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample[large_bank==1 & yr %in% yr_range[[3]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample[large_bank==1 & yr %in% yr_range[[4]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample[large_bank==1 & yr %in% yr_range[[4]]],vcov = ~RSSDID)
+)
+```
+```{r}
+mean(reg_sample[large_bank==1 & yr %in% yr_range[[1]]]$closed,na.rm=T)
+mean(reg_sample[large_bank==1 & yr %in% yr_range[[2]]]$closed,na.rm=T)
+mean(reg_sample[large_bank==1 & yr %in% yr_range[[3]]]$closed,na.rm=T)
+mean(reg_sample[large_bank==1 & yr %in% yr_range[[4]]]$closed,na.rm=T)
+```
+
+```{r}
+#| results: asis
+etable(result_tables[['closed_large_by_cycle']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("DF per dollar"))
+```
+
+
+```{r}
+result_tables[['closed_small_by_cycle']] <- list(
+        feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample[large_bank==0 & yr %in% yr_range[[1]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample[large_bank==0 & yr %in% yr_range[[1]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample[large_bank==0 & yr %in% yr_range[[2]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample[large_bank==0 & yr %in% yr_range[[2]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample[large_bank==0 & yr %in% yr_range[[3]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample[large_bank==0 & yr %in% yr_range[[3]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_state_closure,data=reg_sample[large_bank==0 & yr %in% yr_range[[4]]],vcov = ~RSSDID),
+        feols(closed~deposit_beta+..ctrl_county_closure,data=reg_sample[large_bank==0 & yr %in% yr_range[[4]]],vcov = ~RSSDID)
+)
+```
+
+
+```{r}
+mean(reg_sample[large_bank==0 & yr %in% yr_range[[1]]]$closed,na.rm=T)
+mean(reg_sample[large_bank==0 & yr %in% yr_range[[2]]]$closed,na.rm=T)
+mean(reg_sample[large_bank==0 & yr %in% yr_range[[3]]]$closed,na.rm=T)
+mean(reg_sample[large_bank==0 & yr %in% yr_range[[4]]]$closed,na.rm=T)
+```
+
+
+```{r}
+etable(result_tables[['closed_small_by_cycle']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("DF per dollar"))
+```
+
+
+
+
+```{r}
+branch_chars <- readRDS('../data/sod-branch-chars-1987-2024.rds')
+```
+
+```{r}
+branch_visits <- readRDS('../data/bank_branch_visits_count_2019_2022.rds')
+branch_visits[,yr:=year(DATE_RANGE_START)]
+branch_visits <- branch_visits[yr %in% c(2019,2021)]
+
+# visits_change <- branch_visits[,.(no_visits=mean(RAW_VISIT_COUNTS)),by=.(yr,UNINUMBR)]
+# visits_change <- dcast(visits_change,formula=UNINUMBR~yr)
+# visits_change[,pct_change_2019_2021:=(`2021`-`2019`)/`2019`]
+# visits_change[,pct_change_2019_2021:=Winsorize(pct_change_2019_2021, quantile(pct_change_2019_2021, probs=c(0.01, 0.99), na.rm = TRUE))]
+# visits_change <- visits_change[,c("UNINUMBR","pct_change_2019_2021")]
+# write.csv(visits_change,"branch_level_visits_change_2019_2021.csv",row.names = F)
+
+branch_visits <- merge(branch_visits,branch_chars[,c("UNINUMBR","ZIPBR")],by="UNINUMBR")
+
+distance <- branch_visits[yr==2019,c("ZIPBR","DISTANCE_FROM_HOME")]
+distance <- distance[,.(distance_km=mean(DISTANCE_FROM_HOME,na.rm=T)/1000),by=ZIPBR]
+
+branch_visits <- branch_visits[,c("ZIPBR","RAW_VISIT_COUNTS","yr")]
+branch_visits[,no_branches:=.N,by=.(ZIPBR,yr)]
+branch_visits <- branch_visits[no_branches>4]
+
+branch_visits <- branch_visits[,.(number_of_visits=sum(RAW_VISIT_COUNTS,na.rm=T)),by=.(ZIPBR,yr)]
+branch_visits <- dcast(branch_visits,ZIPBR~yr)
+branch_visits[,change_visits:=(`2019`-`2021`)/`2019`]
+# branch_visits[,change_visits:=change_visits*100]
+
+
+branch_visits <- merge(branch_visits,distance,by="ZIPBR")
+branch_visits[,change_visits:=Winsorize(change_visits, quantile(change_visits, probs=c(0.01, 0.99), na.rm = TRUE))]
+branch_visits[,distance_km:=Winsorize(distance_km, quantile(distance_km, probs=c(0.01, 0.99), na.rm = TRUE))]
+branch_visits[,ZIPBR:=str_pad(ZIPBR,5,"left","0")]
+```
+
+
+```{r}
+closures <- merge(reg_sample[yr>=2022],branch_visits[,c("ZIPBR","change_visits","distance_km")],by.x="zip",by.y="ZIPBR")
+closures[,bank_year:=paste(RSSDID,yr)]
+closures[,state_year:=paste(substr(STCNTYBR,1,2),yr)]
+```
+
+
+
+```{r}
+# yr_1 <- 2020
+# yr_2 <- 2023
+# 
+# result_tables[['closed_usage_full']] <- list(
+#           feols(closed~deposit_beta+..ctrl_state_closure,data=closures[yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+#           feols(closed~deposit_beta+..ctrl_county_closure,data=closures[yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+#           feols(closed~deposit_beta*change_visits+deposit_beta*log(distance_km)+..ctrl_state_closure,data=closures[yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+#           feols(closed~deposit_beta*change_visits+deposit_beta*log(distance_km)+..ctrl_county_closure,data=closures[yr %in% yr_1:yr_2 ],vcov = ~RSSDID)
+# )
+# 
+# result_tables[['closed_usage_by_size']] <- list(
+#           feols(closed~deposit_beta+..ctrl_state_closure,data=closures[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+#           feols(closed~deposit_beta+..ctrl_county_closure,data=closures[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+#           feols(closed~deposit_beta*change_visits+deposit_beta*log(distance_km)+..ctrl_state_closure,data=closures[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+#           feols(closed~deposit_beta*change_visits+deposit_beta*log(distance_km)+..ctrl_county_closure,data=closures[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+#           feols(closed~deposit_beta+..ctrl_state_closure,data=closures[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+#           feols(closed~deposit_beta+..ctrl_county_closure,data=closures[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+#           feols(closed~deposit_beta*change_visits+deposit_beta*log(distance_km)+..ctrl_state_closure,data=closures[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+#           feols(closed~deposit_beta*change_visits+deposit_beta*log(distance_km)+..ctrl_county_closure,data=closures[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID)
+# )
+```
+
+```{r}
+yr_1 <- 2020
+yr_2 <- 2023
+
+result_tables[['closed_usage_full']] <- list(
+          feols(closed~deposit_beta+..ctrl_state_closure,data=closures[yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_county_closure,data=closures[yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(closed~deposit_beta+change_visits+log(distance_km)+..ctrl_state_closure,data=closures[yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(closed~deposit_beta+change_visits+log(distance_km)+..ctrl_county_closure,data=closures[yr %in% yr_1:yr_2 ],vcov = ~RSSDID)
+)
+
+result_tables[['closed_usage_by_size']] <- list(
+          feols(closed~deposit_beta+..ctrl_state_closure,data=closures[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_county_closure,data=closures[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(closed~deposit_beta+change_visits+log(distance_km)+..ctrl_state_closure,data=closures[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(closed~deposit_beta+change_visits+log(distance_km)+..ctrl_county_closure,data=closures[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_state_closure,data=closures[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(closed~deposit_beta+..ctrl_county_closure,data=closures[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(closed~deposit_beta+change_visits+log(distance_km)+..ctrl_state_closure,data=closures[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(closed~deposit_beta+change_visits+log(distance_km)+..ctrl_county_closure,data=closures[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID)
+)
+```
+
+```{r}
+mean(closures[yr %in% yr_1:yr_2 ]$closed,na.rm=T)
+mean(closures[large_bank==1 & yr %in% yr_1:yr_2 ]$closed,na.rm=T)
+mean(closures[large_bank==0 & yr %in% yr_1:yr_2 ]$closed,na.rm=T)
+
+```
+
+
+```{r}
+#| results: asis
+etable(result_tables[['closed_usage_full']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("Deposit Beta"),
+       group=list(Controls=omit_controls[!omit_controls %in% c("Deposit Beta","Drop in visits","Distance km","Deposits")]))
+```
+```{r}
+#| results: asis
+etable(result_tables[['closed_usage_by_size']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("Deposit Beta"),
+       group=list(Controls=omit_controls[!omit_controls %in% c("Deposit Beta","Drop in visits","Distance km","Deposits")]))
+```
+
+
+```{r}
+bank_chars <- readRDS('../data/sod-bank-chars-1987-2024.rds')
+bank_chars[, bank_assets := as.numeric(gsub(",", "", ASSET))]
+
+#| eval: true
+branch_year <- readRDS('../data/sod-branch-year-1987-2024.rds')
+branch_year <- branch_year[RSSDID %in% bank_chars$RSSDID]
+branch_year <- merge(branch_year,bank_chars[,c("RSSDID","RSSDHCR","YEAR","bank_assets")],by=c("RSSDID","YEAR"))
+
+
+branch_chars <- readRDS('../data/sod-branch-chars-1987-2024.rds')
+
+branch_year <- merge(branch_year,branch_chars[,c("UNINUMBR","STCNTYBR","ZIPBR")],by=c("UNINUMBR"),all.x=T)
+setnames(branch_year,c("ZIPBR","YEAR"),c("zip","yr"))
+branch_year[,zip:=str_pad(zip,5,"left","0")]
+branch_year[,STCNTYBR:=str_pad(STCNTYBR,5,"left","0")]
+
+open_data <- branch_year %>%
+                arrange(UNINUMBR,yr) %>%
+                group_by(UNINUMBR) %>%
+                mutate(
+                  prev_year = lag(yr)
+                ) %>%
+                ungroup() %>% data.table()
+
+
+open_data <- open_data %>%
+                arrange(UNINUMBR,yr) %>%
+                group_by(UNINUMBR) %>%
+                mutate(
+                  new_branch = ifelse(is.na(prev_year) ,1,0)
+                ) %>%
+                ungroup() %>% data.table()
+tt <- open_data[new_branch==1 & yr %in% 2004:2011,.(no_new_branches=.N),by=.(RSSDID,yr)]
+tt <- dcast(tt,RSSDID~yr)
+exclude_2011 <- tt[is.na(`2004`) & is.na(`2005`) & is.na(`2006`) & is.na(`2007`) & is.na(`2008`) & is.na(`2009`) & is.na(`2010`) & `2011`>0]$RSSDID
+
+open_data <- open_data[!RSSDID %in% exclude_2011]
+open_data <- open_data[new_branch==1]
+
+
+
+
+zip_open_summary <- open_data[,.(opening = max(new_branch,na.rm=T)),by=.(yr,zip)]
+
+
+zip_open_summary <- zip_open_summary %>%
+        arrange(zip,yr)%>%
+        group_by(zip) %>%
+        mutate(
+          l_open_1 = lag(opening, 1), 
+          l_open_2 = lag(opening, 2), 
+          l_open_3 = lag(opening, 3)
+        ) %>% ungroup() %>% data.table()
+
+zip_open_summary[is.na(zip_open_summary)] <- 0
+
+zip_open_summary[,l_open:=(l_open_1+l_open_2+l_open_3)]
+zip_open_summary[,l_open:=ifelse(l_open>0,1,0)]
+zip_open_summary <- zip_open_summary[,c("zip","yr","l_open")]
+
+reg_sample <- merge(reg_sample,zip_open_summary,by.x=c("zip","yr"),by.y=c("zip","yr"),all.x=T)
+reg_sample[,l_open:=ifelse(is.na(l_open),0,l_open)]
+
+```
+
+
+
+```{r}
+result_tables[['closed_version_2']] <- list(
+          feols(closed~deposit_beta+l_open+..ctrl_state_closure,data=reg_sample,vcov = ~RSSDID),
+          feols(closed~deposit_beta+l_open+..ctrl_county_closure,data=reg_sample,vcov = ~RSSDID),
+          feols(closed~deposit_beta+l_open+..ctrl_state_closure,data=reg_sample[large_bank==1],vcov = ~RSSDID),
+          feols(closed~deposit_beta+l_open+..ctrl_county_closure,data=reg_sample[large_bank==1],vcov = ~RSSDID),
+          feols(closed~deposit_beta+l_open+..ctrl_state_closure,data=reg_sample[large_bank==0],vcov = ~RSSDID),
+          feols(closed~deposit_beta+l_open+..ctrl_county_closure,data=reg_sample[large_bank==0],vcov = ~RSSDID)
+)
+```
+
+```{r}
+#| results: asis
+etable(result_tables[['closed_version_2']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),headers = list("All banks"=2,"Large banks"=2,"Small banks"=2),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("DF per dollar","Deposit Beta"))
+```
+
+# openings
+
+
+```{r}
+
+open_data <- readRDS("bank_zip_cbsa_presence_new_entry.rds")# create-branch-opening-sample-08232025-v1.0.qmd
+open_data[,large_bank:=ifelse(RSSDID %in% large_banks,1,0)]
+
+
+for(i in 1:length(cycles)) {
+  cycle <- cycles[[i]]
+  cycle_nm <- names(cycles)[i]
+  
+  open_data[,pred_int_exp_chg:=predict(cycle[['reg']],newdata = open_data)]
+  setnames(open_data,"pred_int_exp_chg",paste0("pred_int_exp_chg_",cycle_nm))
+}
+
+
+open_data[,deposit_beta:=ifelse(yr<=2014,pred_int_exp_chg_0406/cycles[[1]]$rate_chg,
+                                 ifelse(yr<=2019,pred_int_exp_chg_1619/cycles[[2]]$rate_chg,pred_int_exp_chg_2224/cycles[[3]]$rate_chg))]
+
+open_data[,df_per_dollar:=(1-deposit_beta)*(1-(1/(1.025)^10))]
+
+open_data[,lag_county_cra_volume:=ifelse(is.na(lag_county_cra_volume),1,lag_county_cra_volume)]
+open_data[,lag_county_mortgage_volume:=ifelse(is.na(lag_county_mortgage_volume),1,lag_county_mortgage_volume)]
+
+open_data[,beta_bin_within_bank_year:=ntile(deposit_beta,10),by=.(RSSDID,yr)]
+open_data[,beta_bin_within_year:=ntile(deposit_beta,10),by=.(yr)]
+```
+
+
+
+## Univar- within bank
+
+```{r}
+temp <- open_data[!is.na(beta_bin_within_bank_year),.(openings=mean(new_branch_zip,na.rm=T)),by=.(beta_bin_within_bank_year,yr)]
+temp[,beta_bin:=beta_bin_within_bank_year]
+
+temp1 <- temp[yr %in% 2020:2023,.(openings=mean(openings)),by=beta_bin]
+temp1[,cycle:="Late Cycle"]
+
+temp2 <- temp[yr %in% 2015:2019,.(openings=mean(openings,na.rm=T)),by=beta_bin]
+temp2[,cycle:="Mid Cycle"]
+
+
+temp3 <- temp[yr %in% 2001:2014,.(openings=mean(openings,na.rm=T)),by=beta_bin]
+temp3[,cycle:="Early Cycle"]
+
+
+temp <- rbind(temp1,temp2,temp3)
+temp[,openings:=Winsorize(openings, quantile(openings, probs=c(0.05, 0.95), na.rm = TRUE)),by=.(beta_bin,cycle)]
+
+g <- ggplot(temp,aes(x=beta_bin,y=openings*100,color=cycle))+geom_point(size=3,alpha=0.75,aes(shape=cycle))+
+  scale_x_continuous(n.breaks = 10)+
+   scale_color_manual(
+        values = c("Late Cycle"="dodgerblue4",
+                   "Mid Cycle" = "tan2",
+                   "Early Cycle" = "gray"
+                   )
+      )+
+  theme_minimal()+
+  labs(x="Deposit Beta decile",y="Pct of zip codes with new branches (%)")+
+   theme(legend.position = "bottom",legend.title =  element_blank())
+```
+
+
+## Univar- not within bank
+
+```{r}
+temp <- open_data[!is.na(beta_bin_within_year),.(openings=mean(new_branch_zip,na.rm=T)),by=.(beta_bin_within_year,yr)]
+temp[,beta_bin:=beta_bin_within_year]
+
+temp1 <- temp[yr %in% 2020:2023,.(openings=mean(openings)),by=beta_bin]
+temp1[,cycle:="Late Cycle"]
+
+temp2 <- temp[yr %in% 2015:2019,.(openings=mean(openings,na.rm=T)),by=beta_bin]
+temp2[,cycle:="Mid Cycle"]
+
+
+temp3 <- temp[yr %in% 2001:2014,.(openings=mean(openings,na.rm=T)),by=beta_bin]
+temp3[,cycle:="Early Cycle"]
+
+
+temp <- rbind(temp1,temp2,temp3)
+temp[,openings:=Winsorize(openings, quantile(openings, probs=c(0.01, 0.99), na.rm = TRUE)),by=.(beta_bin,cycle)]
+
+g <- ggplot(temp,aes(x=beta_bin,y=openings*100,color=cycle))+geom_point(size=3,alpha=0.75,aes(shape=cycle))+
+  scale_x_continuous(n.breaks = 10)+
+   scale_color_manual(
+        values = c("Late Cycle"="dodgerblue4",
+                   "Mid Cycle" = "tan2",
+                   "Early Cycle" = "gray"
+                   )
+      )+
+  theme_minimal()+
+  labs(x="Deposit Beta decile",y="Pct of zip codes with new branches (%)")+
+   theme(legend.position = "bottom",legend.title =  element_blank())
+
+
+if(save==T) {
+  ggsave("figures/univar_branch_openings.jpg",g,width = 5,height = 3.5)
+}  else {
+print(g)
+}
+```
+# Table 5: Descriptive Statistics for Branch Opening Sample
+```{r}
+#| results: asis
+
+source('https://raw.githubusercontent.com/dratnadiwakara/r-utilities/refs/heads/main/summary_stat_tables.R')
+
+temp <- open_data[yr %in% c(2012,2019)]
+temp[,zip_dep_amount:=floor(zip_dep_amount/1000)]
+temp[,new_branch_zip:=new_branch_zip*100]
+# temp[,log_deposits := log(1+zip_dep_amount)]
+
+setnames(temp,
+         c("new_branch_zip","deposit_beta","zip_dep_amount","log_deposits","lag_county_deposit_gr","lag_hmda_mtg_amt_gr","lag_cra_loan_amount_amt_lt_1m_gr","lag_establishment_gr","lag_payroll_gr","lmi"),
+         new_names <- c("New Entry","Deposit Beta","Zip deposits (mn)","Deposits - log","Deposit 3yr growth","Mortgage 3yr growth","CRA 3yr growth","Establishments 3yr growth","Payroll 3yr growth","Low to Moderate Income Area"))
+
+temp1 <- summary_stats_function(temp[large_bank==1 & yr==2019],new_names)
+temp1 <- temp1 %>% select(-P25,-P50,-P75,-Obs) %>% data.table
+temp1[,SD2:=NA_real_]
+temp1 <- temp1[,.(Variable,Mean,SD,SD2,P10,P90)]
+
+
+temp2 <- summary_stats_function(temp[large_bank==1 & yr==2012],new_names)
+temp2 <- temp2 %>% select(-P25,-P50,-P75,-Obs) %>% data.table
+temp2[,SD2:=NA_real_]
+temp2 <- temp2[,.(Variable,Mean,SD,SD2,P10,P90)]
+
+result_tables[['desc_stats_large_banks_open']] <- merge(temp1,temp2,by="Variable")
+
+# print(xtable(op),table.placement=NULL,floating=F,include.rownames=F,comment=F,scalebox = 0.8, latex.environments = "center")
+
+```
+
+```{r}
+#| eval: false
+#| results: asis
+print(xtable(result_tables[['desc_stats_large_banks_open']],digits=3),table.placement=NULL,floating=F,include.rownames=F,comment=F,scalebox = 0.8, latex.environments = "center")
+```
+
+
+
+```{r}
+#| results: asis
+
+temp <- open_data[yr %in% c(2012,2019)]
+temp[,zip_dep_amount:=floor(zip_dep_amount/1000)]
+temp[,new_branch_zip:=new_branch_zip*100]
+
+setnames(temp,
+         c("new_branch_zip","deposit_beta","zip_dep_amount","log_deposits","lag_county_deposit_gr","lag_hmda_mtg_amt_gr","lag_cra_loan_amount_amt_lt_1m_gr","lag_establishment_gr","lag_payroll_gr","lmi"),
+         new_names <- c("New Entry","Deposit Beta","Zip deposits (mn)","Deposits - log","Deposit 3yr growth","Mortgage 3yr growth","CRA 3yr growth","Establishments 3yr growth","Payroll 3yr growth","Low to Moderate Income Area"))
+
+temp1 <- summary_stats_function(temp[large_bank==0 & yr==2019],new_names)
+temp1 <- temp1 %>% select(-P25,-P50,-P75,-Obs) %>% data.table
+temp1[,SD2:=NA_real_]
+temp1 <- temp1[,.(Variable,Mean,SD,SD2,P10,P90)]
+
+
+temp2 <- summary_stats_function(temp[large_bank==0 & yr==2012],new_names)
+temp2 <- temp2 %>% select(-P25,-P50,-P75,-Obs) %>% data.table
+temp2[,SD2:=NA_real_]
+temp2 <- temp2[,.(Variable,Mean,SD,SD2,P10,P90)]
+
+result_tables[['desc_stats_small_banks_open']] <- merge(temp1,temp2,by="Variable")
+
+# print(xtable(op),table.placement=NULL,floating=F,include.rownames=F,comment=F,scalebox = 0.8, latex.environments = "center")
+
+```
+
+```{r}
+#| eval: false
+#| results: asis
+print(xtable(result_tables[['desc_stats_small_banks_open']],digits = 3),table.placement=NULL,floating=F,include.rownames=F,comment=F,scalebox = 0.8, latex.environments = "center")
+```
+
+
+```{r}
+
+
+temp_df <- copy(df[is.finite(deposit_beta) & yr==2019 & large_bank==1])
+reg <- feols(deposit_beta~0|county_year+bank_year,temp_df)
+temp_df[,pred_deposit_beta:=predict(reg,newdata=temp_df)]
+temp_df[,resid_deposit_beta:=deposit_beta-pred_deposit_beta]
+
+reg <- feols(log_deposits~0|county_year+bank_year,temp_df)
+temp_df[,pred_log_deposits:=predict(reg,newdata=temp_df)]
+temp_df[,resid_log_deposits:=log_deposits-pred_log_deposits]
+
+sd(temp_df$resid_deposit_beta,na.rm = T)
+sd(temp_df$resid_log_deposits,na.rm = T)
+
+
+temp_df <- copy(df[is.finite(deposit_beta) & yr==2012 & large_bank==1])
+reg <- feols(deposit_beta~0|county_year+bank_year,temp_df)
+temp_df[,pred_deposit_beta:=predict(reg,newdata=temp_df)]
+temp_df[,resid_deposit_beta:=deposit_beta-pred_deposit_beta]
+
+reg <- feols(log_deposits~0|county_year+bank_year,temp_df)
+temp_df[,pred_log_deposits:=predict(reg,newdata=temp_df)]
+temp_df[,resid_log_deposits:=log_deposits-pred_log_deposits]
+
+sd(temp_df$resid_deposit_beta,na.rm = T)
+sd(temp_df$resid_log_deposits,na.rm = T)
+
+
+
+
+temp_df <- copy(df[is.finite(deposit_beta) & yr==2019 & large_bank==0])
+reg <- feols(deposit_beta~0|county_year+bank_year,temp_df)
+temp_df[,pred_deposit_beta:=predict(reg,newdata=temp_df)]
+temp_df[,resid_deposit_beta:=deposit_beta-pred_deposit_beta]
+
+reg <- feols(log_deposits~0|county_year+bank_year,temp_df)
+temp_df[,pred_log_deposits:=predict(reg,newdata=temp_df)]
+temp_df[,resid_log_deposits:=log_deposits-pred_log_deposits]
+
+sd(temp_df$resid_deposit_beta,na.rm = T)
+sd(temp_df$resid_log_deposits,na.rm = T)
+
+
+temp_df <- copy(df[is.finite(deposit_beta) & yr==2012 & large_bank==0])
+reg <- feols(deposit_beta~0|county_year+bank_year,temp_df)
+temp_df[,pred_deposit_beta:=predict(reg,newdata=temp_df)]
+temp_df[,resid_deposit_beta:=deposit_beta-pred_deposit_beta]
+
+reg <- feols(log_deposits~0|county_year+bank_year,temp_df)
+temp_df[,pred_log_deposits:=predict(reg,newdata=temp_df)]
+temp_df[,resid_log_deposits:=log_deposits-pred_log_deposits]
+
+sd(temp_df$resid_deposit_beta,na.rm = T)
+sd(temp_df$resid_log_deposits,na.rm = T)
+
+
+
+```
+
+
+# Table 7: Baseline Opening Model
+```{r}
+result_tables[['open_full']] <- list(
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening ,data=open_data,vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening ,data=open_data,vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening ,data=open_data[large_bank==1],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening ,data=open_data[large_bank==1],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening ,data=open_data[large_bank==0],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening ,data=open_data[large_bank==0],vcov = ~RSSDID)
+)
+```
+
+```{r}
+mean(open_data$new_branch_zip,na.rm=T)
+mean(open_data[large_bank==1]$new_branch_zip,na.rm=T)
+mean(open_data[large_bank==0]$new_branch_zip,na.rm=T)
+```
+
+
+
+```{r}
+#| results: asis
+etable(result_tables[['open_full']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),headers = list("All banks"=2,"Large banks"=2,"Small banks"=2),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("DF per dollar","log(Zip deposits)"))
+```
+
+
+
+
+
+```{r}
+# closure: log(lag_branch_deposit_amount)+same_zip_prior_3yr_branches+legacy_branch+log(lag_bank_county_mortgage_volume)+log(lag_bank_county_cra_volume)+lag_county_deposit_gr+lag_hmda_mtg_amt_gr+lag_cra_loan_amount_amt_lt_1m_gr+lag_establishment_gr+lag_payroll_gr+lmi|state_yr+bank_yr
+# opening: log(zip_dep_amount)+lag_county_deposit_gr+lag_hmda_mtg_amt_gr+lag_cra_loan_amount_amt_lt_1m_gr+log(lag_county_mortgage_volume)+log(lag_county_cra_volume)+lag_establishment_gr+lag_payroll_gr+lmi|state_year+bank_year
+df_wald <- wald(result_tables[['open_full']][[1]],c("deposit_beta","zip_dep_amount"))
+df_wald <- df_wald[[1]]
+print(df_wald)
+
+lending_wald <- wald(result_tables[['open_full']][[1]],c("lag_county_mortgage_volume","lag_county_cra_volume","lag_hmda_mtg_amt_gr","lag_cra_loan_amount_amt_lt_1m_gr"))
+lending_wald <- lending_wald[[1]]
+print(lending_wald)
+```
+```{r}
+result_tables[['open_ia_version_3']] <- list(
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening ,data=open_data[is.na(new_cbsa_entry)],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening ,data=open_data[is.na(new_cbsa_entry)],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening ,data=open_data[large_bank==1 & is.na(new_cbsa_entry)],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening ,data=open_data[large_bank==1 & is.na(new_cbsa_entry)],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening ,data=open_data[large_bank==0  & is.na(new_cbsa_entry)],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening ,data=open_data[large_bank==0  & is.na(new_cbsa_entry)],vcov = ~RSSDID)
+)
+```
+```{r}
+#| results: asis
+etable(result_tables[['open_ia_version_3']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),headers = list("All banks"=2,"Large banks"=2,"Small banks"=2),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("DF per dollar","log(Zip deposits)"))
+```
+
+
+
+```{r}
+result_tables[['open_full_strip_down']] <- list(
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening_strip_down ,data=open_data,vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening ,data=open_data,vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening_strip_down ,data=open_data[large_bank==1],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening ,data=open_data[large_bank==1],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening_strip_down ,data=open_data[large_bank==0],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening ,data=open_data[large_bank==0],vcov = ~RSSDID)
+)
+```
+```{r}
+#| results: asis
+etable(result_tables[['open_full_strip_down']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),headers = list("All banks"=2,"Large banks"=2,"Small banks"=2),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = tex_output,
+       style.tex = style.tex("aer"),
+       order=c("DF per dollar","log(Zip deposits)"))
+```
+
+
+
+# Table 9: Reduced Form Pooled Opening Model
+
+```{r}
+result_tables[['open_rf_full']] <- list(
+          feols(new_branch_zip~college_frac+log(family_income)+dividend_frac+factor_age_bin+lag_county_deposit_hhi+population_density+..ctrl_state_opening ,data=open_data[!is.na(deposit_beta)],vcov = ~RSSDID),
+          feols(new_branch_zip~college_frac+log(family_income)+dividend_frac+factor_age_bin+..ctrl_county_opening ,data=open_data[!is.na(deposit_beta)],vcov = ~RSSDID),
+          feols(new_branch_zip~sophisticated+log(family_income)+factor_age_bin+lag_county_deposit_hhi+population_density+..ctrl_state_opening ,data=open_data[!is.na(deposit_beta)],vcov = ~RSSDID),
+          feols(new_branch_zip~sophisticated+log(family_income)+factor_age_bin+..ctrl_county_opening ,data=open_data[!is.na(deposit_beta)],vcov = ~RSSDID)
+)
+```
+
+
+```{r}
+#| results: asis
+etable(result_tables[['open_rf_full']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("College frac","Stock market frac","Sophisticated zipcode","log(Zip code deposits)"),
+       group=list(Controls=omit_controls[!omit_controls %in% c("Sophisticated zipcode","Age Q1-Q2","Age Q2-Q3","Age >Q3","Income","College frac","Stock market frac","County deposit HHI","Population density","Zip code deposits")]))
+```
+
+
+
+
+
+```{r}
+result_tables[['open_rf_by_size']] <- list(
+          feols(new_branch_zip~college_frac+log(family_income)+dividend_frac+factor_age_bin+lag_county_deposit_hhi+population_density+..ctrl_state_opening ,data=open_data[large_bank==1 & !is.na(deposit_beta)],vcov = ~RSSDID),
+          feols(new_branch_zip~college_frac+log(family_income)+dividend_frac+factor_age_bin+..ctrl_county_opening ,data=open_data[large_bank==1 & !is.na(deposit_beta)],vcov = ~RSSDID),
+          feols(new_branch_zip~college_frac+log(family_income)+dividend_frac+factor_age_bin+lag_county_deposit_hhi+population_density+..ctrl_state_opening ,data=open_data[large_bank==0 & !is.na(deposit_beta)],vcov = ~RSSDID),
+          feols(new_branch_zip~college_frac+log(family_income)+dividend_frac+factor_age_bin+..ctrl_county_opening ,data=open_data[large_bank==0 & !is.na(deposit_beta)],vcov = ~RSSDID),
+          feols(new_branch_zip~sophisticated+log(family_income)+factor_age_bin+lag_county_deposit_hhi+population_density+..ctrl_state_opening ,data=open_data[large_bank==1 & !is.na(deposit_beta)],vcov = ~RSSDID),
+          feols(new_branch_zip~sophisticated+log(family_income)+factor_age_bin+..ctrl_county_opening ,data=open_data[large_bank==1 & !is.na(deposit_beta)],vcov = ~RSSDID),
+          feols(new_branch_zip~sophisticated+log(family_income)+factor_age_bin+lag_county_deposit_hhi+population_density+..ctrl_state_opening ,data=open_data[large_bank==0 & !is.na(deposit_beta)],vcov = ~RSSDID),
+          feols(new_branch_zip~sophisticated+log(family_income)+factor_age_bin+..ctrl_county_opening ,data=open_data[large_bank==0 & !is.na(deposit_beta)],vcov = ~RSSDID)
+)
+```
+
+
+
+
+```{r}
+#| results: asis
+etable(result_tables[['open_rf_by_size']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+         dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("College frac","Stock market frac","Sophisticated zipcode","log(Zip code deposits)"),
+       group=list(Controls=omit_controls[!omit_controls %in% c("Sophisticated zipcode","Age Q1-Q2","Age Q2-Q3","Age >Q3","Income","College frac","Stock market frac","County deposit HHI","Population density","Zip code deposits")]))
+```
+
+# Openings by Regime
+
+```{r}
+result_tables[['opening_large_by_cycle']] <- list(
+        feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=open_data[large_bank==1 & yr %in% yr_range[[1]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=open_data[large_bank==1 & yr %in% yr_range[[1]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=open_data[large_bank==1 & yr %in% yr_range[[2]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=open_data[large_bank==1 & yr %in% yr_range[[2]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=open_data[large_bank==1 & yr %in% yr_range[[3]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=open_data[large_bank==1 & yr %in% yr_range[[3]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=open_data[large_bank==1 & yr %in% yr_range[[4]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=open_data[large_bank==1 & yr %in% yr_range[[4]]],vcov = ~RSSDID)
+)
+```
+```{r}
+mean(open_data[large_bank==1 & yr %in% yr_range[[1]]]$new_branch_zip,na.rm=T)
+mean(open_data[large_bank==1 & yr %in% yr_range[[2]]]$new_branch_zip,na.rm=T)
+mean(open_data[large_bank==1 & yr %in% yr_range[[3]]]$new_branch_zip,na.rm=T)
+mean(open_data[large_bank==1 & yr %in% yr_range[[4]]]$new_branch_zip,na.rm=T)
+```
+
+```{r}
+mean(open_data[large_bank==0 & yr %in% yr_range[[1]]]$new_branch_zip,na.rm=T)
+mean(open_data[large_bank==0 & yr %in% yr_range[[2]]]$new_branch_zip,na.rm=T)
+mean(open_data[large_bank==0 & yr %in% yr_range[[3]]]$new_branch_zip,na.rm=T)
+mean(open_data[large_bank==0 & yr %in% yr_range[[4]]]$new_branch_zip,na.rm=T)
+```
+
+
+```{r}
+#| results: asis
+etable(result_tables[['opening_large_by_cycle']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("Deposit Beta"))
+```
+
+
+```{r}
+result_tables[['opening_small_by_cycle']] <- list(
+        feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=open_data[large_bank==0 & yr %in% yr_range[[1]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=open_data[large_bank==0 & yr %in% yr_range[[1]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=open_data[large_bank==0 & yr %in% yr_range[[2]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=open_data[large_bank==0 & yr %in% yr_range[[2]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=open_data[large_bank==0 & yr %in% yr_range[[3]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=open_data[large_bank==0 & yr %in% yr_range[[3]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=open_data[large_bank==0 & yr %in% yr_range[[4]]],vcov = ~RSSDID),
+        feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=open_data[large_bank==0 & yr %in% yr_range[[4]]],vcov = ~RSSDID)
+)
+```
+```{r}
+#| results: asis
+etable(result_tables[['opening_small_by_cycle']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("Deposit Beta"))
+```
+
+
+
+# Usage
+
+```{r}
+branch_chars <- readRDS('../data/sod-branch-chars-1987-2024.rds')
+```
+
+
+```{r}
+branch_visits <- readRDS('../data/bank_branch_visits_count_2019_2022.rds')
+branch_visits[,yr:=year(DATE_RANGE_START)]
+branch_visits <- branch_visits[yr %in% c(2019,2021)]
+
+branch_visits <- merge(branch_visits,branch_chars[,c("UNINUMBR","ZIPBR")],by="UNINUMBR")
+
+distance <- branch_visits[yr==2019,c("ZIPBR","DISTANCE_FROM_HOME")]
+distance <- distance[,.(distance_km=mean(DISTANCE_FROM_HOME,na.rm=T)/1000),by=ZIPBR]
+
+branch_visits <- branch_visits[,c("ZIPBR","RAW_VISIT_COUNTS","yr")]
+branch_visits[,no_branches:=.N,by=.(ZIPBR,yr)]
+branch_visits <- branch_visits[no_branches>4]
+
+branch_visits <- branch_visits[,.(number_of_visits=sum(RAW_VISIT_COUNTS,na.rm=T)),by=.(ZIPBR,yr)]
+branch_visits <- dcast(branch_visits,ZIPBR~yr)
+branch_visits[,change_visits:=(`2019`-`2021`)/`2019`]
+# branch_visits[,change_visits:=change_visits*100]
+
+
+branch_visits <- merge(branch_visits,distance,by="ZIPBR")
+branch_visits[,change_visits:=Winsorize(change_visits, quantile(change_visits, probs=c(0.01, 0.99), na.rm = TRUE))]
+branch_visits[,distance_km:=Winsorize(distance_km, quantile(distance_km, probs=c(0.01, 0.99), na.rm = TRUE))]
+branch_visits[,ZIPBR:=str_pad(ZIPBR,5,"left","0")]
+```
+
+
+
+
+```{r}
+openings <- merge(open_data,branch_visits,by.x="zipcode",by.y="ZIPBR")
+# openings <- merge(open_data,branch_visit_est,by.x="COUNTY",by.y="STCNTYBR")
+openings <- openings[yr>=2022]
+```
+
+
+
+```{r}
+yr_1 <- 2020
+yr_2 <- 2023
+
+result_tables[['open_usage_full']] <- list(
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=openings[yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=openings[yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+change_visits+log(distance_km)+..ctrl_state_opening,data=openings[yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+change_visits+log(distance_km)+..ctrl_county_opening,data=openings[yr %in% yr_1:yr_2 ],vcov = ~RSSDID)
+)
+
+result_tables[['open_usage_by_size']] <- list(
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=openings[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=openings[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+change_visits+log(distance_km)+..ctrl_state_opening,data=openings[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+change_visits+log(distance_km)+..ctrl_county_opening,data=openings[large_bank==1 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=openings[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=openings[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+change_visits+log(distance_km)+..ctrl_state_opening,data=openings[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+change_visits+log(distance_km)+..ctrl_county_opening,data=openings[large_bank==0 & yr %in% yr_1:yr_2 ],vcov = ~RSSDID)
+)
+```
+```{r}
+mean(openings[yr %in% yr_1:yr_2 ]$new_branch_zip,na.rm=T)
+mean(openings[large_bank==1 & yr %in% yr_1:yr_2 ]$new_branch_zip,na.rm=T)
+mean(openings[large_bank==0 & yr %in% yr_1:yr_2 ]$new_branch_zip,na.rm=T)
+```
+
+
+
+```{r}
+#| results: asis
+etable(result_tables[['open_usage_full']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("Deposit Beta"),
+       group=list(Controls=omit_controls[!omit_controls %in% c("Deposit Beta","Drop in visits","Distance km","Zip code deposits")]))
+```
+
+
+```{r}
+#| results: asis
+etable(result_tables[['open_usage_by_size']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("Deposit Beta"),
+       group=list(Controls=omit_controls[!omit_controls %in% c("Deposit Beta","Drop in visits","Distance km","Zip code deposits")]))
+```
+
+```{r}
+
+zip_closure_summary <- reg_sample[,.(mean_closure = mean(closed,na.rm=T),
+                                     closure = max(closed,na.rm=T)),by=.(yr,zip)]
+
+
+zip_closure_summary <- zip_closure_summary %>%
+        arrange(zip,yr)%>%
+        group_by(zip) %>%
+        mutate(
+          l_mean_closure_1 = lag(mean_closure, 1),        
+          l_mean_closure_2 = lag(mean_closure, 2),        
+          l_mean_closure_3 = lag(mean_closure, 3),        
+          l_closure_1 = lag(closure, 1), 
+          l_closure_2 = lag(closure, 2), 
+          l_closure_3 = lag(closure, 3)
+        ) %>% ungroup() %>% data.table()
+
+zip_closure_summary[is.na(zip_closure_summary)] <- 0
+
+zip_closure_summary[,l_mean_closure:=(l_mean_closure_1+l_mean_closure_2+l_mean_closure_3)/3]
+zip_closure_summary[,l_closure:=(l_closure_1+l_closure_2+l_closure_2)]
+zip_closure_summary[,l_closure:=ifelse(l_closure>0,1,0)]
+zip_closure_summary <- zip_closure_summary[,c("zip","yr","l_mean_closure","l_closure")]
+
+open_data <- merge(open_data,zip_closure_summary,by.x=c("zipcode","yr"),by.y=c("zip","yr"),all.x=T)
+open_data[,l_closure:=ifelse(is.na(l_closure),0,l_closure)]
+open_data[,l_mean_closure:=ifelse(is.na(l_mean_closure),0,l_mean_closure)]
+```
+
+
+
+
+# IA Version 2
+```{r}
+result_tables[['open_ia_version_2']] <- list(
+          feols(new_branch_zip~deposit_beta+l_closure+..ctrl_state_opening ,data=open_data,vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+l_closure+..ctrl_county_opening ,data=open_data,vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+l_closure+..ctrl_state_opening ,data=open_data[large_bank==1],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+l_closure+..ctrl_county_opening ,data=open_data[large_bank==1],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+l_closure+..ctrl_state_opening ,data=open_data[large_bank==0],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+l_closure+..ctrl_county_opening ,data=open_data[large_bank==0],vcov = ~RSSDID)
+)
+```
+```{r}
+#| results: asis
+etable(result_tables[['open_ia_version_2']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),headers = list("All banks"=2,"Large banks"=2,"Small banks"=2),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("DF per dollar","log(Zip deposits)"))
+```
+
+
+
+
+```{r}
+set.seed(123)
+temp <- open_data[sample(1:nrow(open_data),nrow(open_data)*0.8522,replace = F)]
+result_tables[['open_full4']] <- list(
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=temp,vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=temp,vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=temp[large_bank==1],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=temp[large_bank==1],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_state_opening,data=temp[large_bank==0],vcov = ~RSSDID),
+          feols(new_branch_zip~deposit_beta+..ctrl_county_opening,data=temp[large_bank==0],vcov = ~RSSDID)
+)
+```
+
+
+```{r}
+#| results: asis
+etable(result_tables[['open_ia_version_2']],se.below = T,signif.code= c("***"=0.01, "**"=0.05, "*"=0.10),headers = list("All banks"=2,"Large banks"=2,"Small banks"=2),
+       dict=covariate_labels_dict,
+       depvar = F,
+       tex = T,
+       style.tex = style.tex("aer"),
+       order=c("DF per dollar","log(Zip deposits)"))
+```
+
+
