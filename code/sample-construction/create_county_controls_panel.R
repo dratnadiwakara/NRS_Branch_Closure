@@ -122,36 +122,50 @@ county_control_df <- merge(county_control_df, county_hhi,
                            by.y = c("STCNTYBR", "yr"), all.x = TRUE)
 
 # ==============================================================================
-# 4. Winsorize Control Variables
+# 4. Fill Missing Values and Extend to Complete Panel
 # ==============================================================================
 
-control_vars <- c("lag_hmda_mtg_amt_gr", "lag_county_gdp_gr", "lag_cra_loan_amount_amt_lt_1m_gr",
-                  "lag_county_deposit_gr", "lmi", "population_density", "lag_establishment_gr", "lag_payroll_gr")
+# Get all unique counties
+all_counties <- unique(county_control_df$county_code)
+
+# Create complete county-year panel (2000-2025)
+complete_panel <- CJ(county_code = all_counties, year = 2000:2025)
+
+# Merge with existing data
+county_control_df <- merge(complete_panel, county_control_df, 
+                           by = c("county_code", "year"), all.x = TRUE)
+
+# Identify all control variables
+control_vars <- c("lag_hmda_mtg_amt_gr", "lag_cra_loan_amount_amt_lt_1m_gr",
+                  "lag_county_deposit_gr", "lag_county_deposit_hhi", "lmi", "population_density", 
+                  "lag_establishment_gr", "lag_payroll_gr", "log_population_density")
 
 # Keep only variables that exist in the data
 control_vars <- control_vars[control_vars %in% names(county_control_df)]
 
-county_control_df <- data.table(county_control_df)
-county_control_df[, (control_vars) := lapply(.SD, function(x) {
-  Winsorize(x, quantile(x, probs = c(0.025, 0.975), na.rm = TRUE))
-}), by = year, .SDcols = control_vars]
+# Fill missing values within each county using forward then backward fill
+county_control_df <- county_control_df[order(county_code, year)]
 
-# Extend data to 2024 and 2025 using 2023 values
-temp_2023 <- county_control_df[year == 2023]
-
-temp_2024 <- copy(temp_2023)
-temp_2024[, year := 2024]
-
-temp_2025 <- copy(temp_2023)
-temp_2025[, year := 2025]
-
-county_control_df <- rbind(county_control_df, temp_2024, temp_2025)
-
-# View(county_control_df[county_code=="48201"])
-
+for(var in control_vars) {
+  # Forward fill (last observation carried forward)
+  county_control_df[, (var) := nafill(get(var), type = "locf"), by = county_code]
+  # Backward fill for any remaining NAs at the start
+  county_control_df[, (var) := nafill(get(var), type = "nocb"), by = county_code]
+  # Do another forward fill pass to ensure 2024-2025 are filled
+  county_control_df[, (var) := nafill(get(var), type = "locf"), by = county_code]
+}
 
 # ==============================================================================
-# 5. Save Output
+# 5. Winsorize Control Variables
+# ==============================================================================
+
+# Winsorize after filling missing values
+county_control_df[, (control_vars) := lapply(.SD, function(x) {
+  Winsorize(x, quantile(x, probs=c(0.025, 0.975), na.rm = T))
+}), by = year, .SDcols = control_vars]
+
+# ==============================================================================
+# 6. Save Output
 # ==============================================================================
 
 saveRDS(county_control_df, file = file.path(data_dir, "county_controls_panel.rds"))

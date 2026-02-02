@@ -115,7 +115,80 @@ bank_level_data <- merge(hhi_bank_level, call_reports,
 bank_level_data <- bank_level_data[!is.na(bank_assets)]
 
 # ==============================================================================
-# 5. Merge All Data Sources
+# 5. Prepare Bank-County Level HMDA and CRA Data
+# ==============================================================================
+
+# Ensure STCNTYBR is formatted as 5-digit character string in branch_df
+branch_df[, STCNTYBR := str_pad(STCNTYBR, 5, "left", "0")]
+
+# HMDA bank-county-year data
+hmda_bank_county_yr <- readRDS(file.path(data_dir, "hmda_bank_county_yr.rds"))
+
+# Backfill 2000-2003 with 2004 values
+temp <- hmda_bank_county_yr[year == 2004]
+for(y in 2000:2003) {
+  temp[, year := y]
+  hmda_bank_county_yr <- rbind(hmda_bank_county_yr, temp)
+}
+
+# Create lagged mortgage volume
+hmda_bank_county_yr <- hmda_bank_county_yr %>%
+  arrange(RSSD, county_code, year) %>%
+  group_by(RSSD, county_code) %>%
+  mutate(
+    lag_bank_county_mortgage_volume = lag(bank_county_mortgage_volume, 1)
+  ) %>% 
+  select(-bank_county_mortgage_volume) %>% 
+  ungroup() %>% 
+  data.table()
+
+# Merge with branch data
+branch_df <- merge(branch_df, hmda_bank_county_yr, 
+                  by.x = c("RSSDID", "yr", "STCNTYBR"), 
+                  by.y = c("RSSD", "year", "county_code"), 
+                  all.x = TRUE)
+
+# Handle missing values: set to 0 if bank appears in HMDA, then add 1 for log
+branch_df[, lag_bank_county_mortgage_volume := 
+          ifelse(is.na(lag_bank_county_mortgage_volume) & RSSDID %in% hmda_bank_county_yr$RSSD, 
+                 0, lag_bank_county_mortgage_volume)]
+branch_df[, lag_bank_county_mortgage_volume := lag_bank_county_mortgage_volume + 1]
+
+# CRA bank-county-year data
+cra_bank_county_yr <- readRDS(file.path(data_dir, "cra_bank_county_yr.rds"))
+
+# Backfill 2000-2003 with 2004 values
+temp <- cra_bank_county_yr[year == 2004]
+for(y in 2000:2003) {
+  temp[, year := y]
+  cra_bank_county_yr <- rbind(cra_bank_county_yr, temp)
+}
+
+# Create lagged CRA volume
+cra_bank_county_yr <- cra_bank_county_yr %>%
+  arrange(RSSD, county_code, year) %>%
+  group_by(RSSD, county_code) %>%
+  mutate(
+    lag_bank_county_cra_volume = lag(loan_amt, 1)
+  ) %>% 
+  select(-loan_amt, -hmda_id) %>% 
+  ungroup() %>% 
+  data.table()
+
+# Merge with branch data
+branch_df <- merge(branch_df, cra_bank_county_yr, 
+                  by.x = c("RSSDID", "yr", "STCNTYBR"), 
+                  by.y = c("RSSD", "year", "county_code"), 
+                  all.x = TRUE)
+
+# Handle missing values: set to 0 if bank appears in CRA, then add 1 for log
+branch_df[, lag_bank_county_cra_volume := 
+          ifelse(is.na(lag_bank_county_cra_volume) & RSSDID %in% cra_bank_county_yr$RSSD, 
+                 0, lag_bank_county_cra_volume)]
+branch_df[, lag_bank_county_cra_volume := lag_bank_county_cra_volume + 1]
+
+# ==============================================================================
+# 6. Merge All Data Sources
 # ==============================================================================
 
 # Lag zip demographics by 1 year
@@ -151,7 +224,7 @@ setorder(final_sample, UNINUMBR, yr)
 final_sample[, uninsured_deposits_frac := nafill(uninsured_deposits_frac, type = "nocb"), by = UNINUMBR]
 
 # ==============================================================================
-# 6. Create Final Variables
+# 7. Create Final Variables
 # ==============================================================================
 
 final_sample[, college_frac := pct_college_educated / 100]
@@ -159,7 +232,7 @@ final_sample[, family_income := median_income]
 final_sample[, age := median_age]
 
 # ==============================================================================
-# 7. Save Output
+# 8. Save Output
 # ==============================================================================
 
 saveRDS(final_sample, file = file.path(data_dir, "branch_closure_analysis_sample.rds"))

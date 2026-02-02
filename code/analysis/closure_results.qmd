@@ -1,11 +1,11 @@
 ---
-title: "Deposit Beta Analysis"
+title: "Branch Closure Results"
 format: 
   html:
     toc: true
     code-fold: true
     df-print: paged
-editor: visual
+editor: source
 ---
 
 # Setup
@@ -20,31 +20,27 @@ library(data.table)
 library(dplyr)
 library(fixest)
 library(modelsummary)
-library(kableExtra)
 library(ggplot2)
 library(lubridate)
 library(xtable)
+library(DescTools)
+library(stringr)
+library(scales)
 
 # Load summary statistics function
 source('https://raw.githubusercontent.com/dratnadiwakara/r-utilities/refs/heads/main/summary_stat_tables.R')
 
 data_dir <- "C:/OneDrive/data/nrs_branch_closure"
 
-# Load deposit beta results
-results <- readRDS(file.path(data_dir, "deposit_beta_results.rds"))
+# Load deposit beta results from three rate cycles
+beta_cycles <- readRDS(file.path(data_dir, "deposit_beta_results.rds"))
 ```
 
-# Overview
+# Data Preparation
 
-This analysis examines how banks' deposit costs respond to interest rate changes (deposit beta) across three Fed hiking cycles:
+## Define Large Banks
 
-- **2004-2006**: Fed Funds +3.5pp
-- **2016-2019**: Fed Funds +2.5pp  
-- **2022-2023**: Fed Funds +4.0pp
-
-# Bank Characteristics by Size
-
-Define large banks using CPI-adjusted asset cutoff ($100M in 2024 dollars):
+Define large banks using CPI-adjusted asset cutoff (\$100M in 2024 dollars):
 
 ```{r}
 #| label: define-large-banks
@@ -64,8 +60,8 @@ cpi[, adj_ratio := CPI / CPI[year == 2024]]
 cpi[, asset_cutoff := adj_ratio * 100000000]
 
 # Get all bank-level data across cycles
-all_banks <- rbindlist(lapply(names(results), function(cycle_name) {
-  dt <- copy(results[[cycle_name]]$data)
+all_banks <- rbindlist(lapply(names(beta_cycles), function(cycle_name) {
+  dt <- copy(beta_cycles[[cycle_name]]$data)
   dt[, cycle := cycle_name]
   # Add year for each cycle (using end year)
   dt[, year := ifelse(cycle == "cycle_0406", 2006,
@@ -80,12 +76,13 @@ all_banks <- merge(all_banks, cpi[, .(year, asset_cutoff)], by = "year", all.x =
 large_banks <- unique(all_banks[bank_assets > asset_cutoff]$ID_RSSD)
 ```
 
-## Prepare Branch-Level Sample
+## Prepare Branch Sample
 
 Load branch sample and calculate deposit betas using predictions from bank-level regressions:
 
 ```{r}
 #| label: prepare-branch-sample
+
 
 # Load branch-level data
 branch_sample <- readRDS(file.path(data_dir, "branch_closure_analysis_sample.rds"))
@@ -97,17 +94,18 @@ branch_sample[, large_bank := ifelse(RSSDID %in% large_banks, 1, 0)]
 branch_sample[, factor_age_bin := as.factor(age_bin)]
 
 # Predict deposit expense changes for each branch using each cycle's regression
-for(i in 1:length(results)) {
-  cycle_nm <- names(results)[i]
-  branch_sample[, pred_int_exp_chg := predict(results[[i]]$reg, newdata = branch_sample)]
+for(i in 1:length(beta_cycles)) {
+  cycle_nm <- names(beta_cycles)[i]
+  cycle_data <- beta_cycles[[cycle_nm]]$data
+  branch_sample[, pred_int_exp_chg := predict(beta_cycles[[i]]$reg, newdata = branch_sample)]
   setnames(branch_sample, "pred_int_exp_chg", paste0("pred_int_exp_chg_", cycle_nm))
 }
 
 # Calculate deposit beta based on year and rate changes
 # Rate changes: 2004-06: 3.5pp, 2016-19: 2.5pp, 2022-23: 4.0pp
-branch_sample[, deposit_beta := ifelse(yr <= 2014, pred_int_exp_chg_cycle_0406 / 0.035,
-                                      ifelse(yr <= 2019, pred_int_exp_chg_cycle_1619 / 0.025,
-                                             pred_int_exp_chg_cycle_2224 / 0.040))]
+branch_sample[, deposit_beta := ifelse(yr <= 2014, pred_int_exp_chg_cycle_0406 / 3.5,
+                                      ifelse(yr <= 2019, pred_int_exp_chg_cycle_1619 / 2.5,
+                                             pred_int_exp_chg_cycle_2224 / 4))]
 
 # Calculate deposit franchise value per dollar
 branch_sample[, df_per_dollar := (1 - deposit_beta) * (1 - (1 / (1.025)^10))]
@@ -133,10 +131,10 @@ print(table(branch_sample$rate_cycle, useNA = "ifany"))
 result_tables <- list()
 
 # Create table for each cycle
-for(i in 1:length(results)) {
-  cat("\n### Cycle:", names(results)[[i]], "\n\n")
+for(i in 1:length(beta_cycles)) {
+  cat("\n### Cycle:", names(beta_cycles)[[i]], "\n\n")
   
-  temp <- copy(results[[i]]$data)
+  temp <- copy(beta_cycles[[i]]$data)
   temp[, large_bank := ifelse(ID_RSSD %in% large_banks, 1, 0)]
   temp[, family_income := floor(family_income / 1000)]  # Convert to thousands
   
@@ -162,15 +160,14 @@ for(i in 1:length(results)) {
   temp2 <- temp2 %>% select(-P25, -P50, -P75, -Obs)
   
   # Merge tables
-  result_tables[[paste0('bank_stats_', names(results)[[i]])]] <- 
+  result_tables[[paste0('bank_stats_', names(beta_cycles)[[i]])]] <- 
     merge(temp1, temp2, by = "Variable")
   
   # Print table (text format)
-  print(kable(result_tables[[paste0('bank_stats_', names(results)[[i]])]], 
-              digits = 3, format = "simple"))
+  md_table((result_tables[[paste0('bank_stats_', names(beta_cycles)[[i]])]]))
   
   # LaTeX version (uncomment to use)
-  # print(xtable(result_tables[[paste0('bank_stats_', names(results)[[i]])]]),
+  # print(xtable(result_tables[[paste0('bank_stats_', names(beta_cycles)[[i]])]]),
   #       table.placement = NULL, floating = FALSE, include.rownames = FALSE,
   #       comment = FALSE, scalebox = 0.8, latex.environments = "center")
   
@@ -204,8 +201,8 @@ covariate_labels_dict <- c(
 
 # Create table using etable
 etable(
-  results$cycle_0406$reg, results$cycle_1619$reg, results$cycle_2224$reg,
-  results$cycle_0406$reg_sophisticated, results$cycle_1619$reg_sophisticated, results$cycle_2224$reg_sophisticated,
+  beta_cycles$cycle_0406$reg, beta_cycles$cycle_1619$reg, beta_cycles$cycle_2224$reg,
+  beta_cycles$cycle_0406$reg_sophisticated, beta_cycles$cycle_1619$reg_sophisticated, beta_cycles$cycle_2224$reg_sophisticated,
   se.below = TRUE,
   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
   headers = list("Early Cycle" = 1, "Mid Cycle" = 1, "Late Cycle" = 1, 
@@ -216,8 +213,8 @@ etable(
 
 # LaTeX version with AER style (uncomment to use)
 # etable(
-#   results$cycle_0406$reg, results$cycle_1619$reg, results$cycle_2224$reg,
-#   results$cycle_0406$reg_sophisticated, results$cycle_1619$reg_sophisticated, results$cycle_2224$reg_sophisticated,
+#   beta_cycles$cycle_0406$reg, beta_cycles$cycle_1619$reg, beta_cycles$cycle_2224$reg,
+#   beta_cycles$cycle_0406$reg_sophisticated, beta_cycles$cycle_1619$reg_sophisticated, beta_cycles$cycle_2224$reg_sophisticated,
 #   se.below = TRUE,
 #   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
 #   headers = list("Early Cycle" = 1, "Mid Cycle" = 1, "Late Cycle" = 1, 
@@ -243,9 +240,9 @@ Distribution of deposit betas across cycles, comparing large and small banks:
 
 # Combine data from all cycles
 beta_density <- data.table()
-for(i in 1:length(results)) {
-  cycle_nm <- names(results)[[i]]
-  temp <- results[[i]]$data[, .(ID_RSSD, deposit_beta)]
+for(i in 1:length(beta_cycles)) {
+  cycle_nm <- names(beta_cycles)[[i]]
+  temp <- beta_cycles[[i]]$data[, .(ID_RSSD, deposit_beta)]
   temp[, large_bank := ifelse(ID_RSSD %in% large_banks, 1, 0)]
   temp[, cycle := cycle_nm]
   beta_density <- rbind(beta_density, temp)
@@ -349,11 +346,12 @@ setFixest_fml(
   ..ctrl_state_closure = ~ log(lag_branch_deposit_amount) + same_zip_prior_3yr_branches + 
                            legacy_branch + lag_county_deposit_gr + 
                            lag_hmda_mtg_amt_gr + lag_cra_loan_amount_amt_lt_1m_gr + 
-                           lag_establishment_gr + lag_payroll_gr + lmi | state_yr + bank_yr,
+                           lag_establishment_gr + lag_payroll_gr + lmi + 
+                           log(lag_bank_county_mortgage_volume) + log(lag_bank_county_cra_volume)| state_yr + bank_yr,
   
   # County-level controls with simplified specification
   ..ctrl_county_closure = ~ log(lag_branch_deposit_amount) + same_zip_prior_3yr_branches + 
-                            legacy_branch | county_yr + bank_yr
+                            legacy_branch + log(lag_bank_county_mortgage_volume) + log(lag_bank_county_cra_volume)| county_yr + bank_yr
 )
 
 # Create fixed effect variables
@@ -361,7 +359,6 @@ branch_sample[, state_yr := paste0(substr(STCNTYBR, 1, 2), "_", yr)]
 branch_sample[, county_yr := paste0(STCNTYBR, "_", yr)]
 branch_sample[, bank_yr := paste0(RSSDID, "_", yr)]
 
-cat("Control variables defined\n")
 ```
 
 ## Baseline Closure Model
@@ -410,6 +407,379 @@ etable(
 #   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
 #   headers = list("All Banks" = 2, "Large Banks" = 2, "Small Banks" = 2),
 #   dict = c("deposit_beta" = "Deposit beta"),
+#   depvar = FALSE,
+#   tex = TRUE,
+#   style.tex = style.tex("aer")
+# )
+```
+
+## Closures by Time Period
+
+Analyze closure patterns across different economic regimes:
+
+```{r}
+#| label: tbl-closure-by-regime
+
+# Define year ranges for different economic periods
+yr_range <- list(
+  "2001-2007" = 2000:2007,  # Pre-crisis
+  "2008-2011" = 2008:2011,  # Financial crisis
+  "2012-2019" = 2012:2019,  # Post-crisis recovery
+  "2020-2023" = 2020:2024   # Pandemic era
+)
+
+# Large banks - closures by regime
+closure_large_by_regime <- list(
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample[large_bank == 1 & yr %in% yr_range[[1]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample[large_bank == 1 & yr %in% yr_range[[1]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample[large_bank == 1 & yr %in% yr_range[[2]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample[large_bank == 1 & yr %in% yr_range[[2]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample[large_bank == 1 & yr %in% yr_range[[3]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample[large_bank == 1 & yr %in% yr_range[[3]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample[large_bank == 1 & yr %in% yr_range[[4]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample[large_bank == 1 & yr %in% yr_range[[4]]], vcov = ~RSSDID)
+)
+
+# Display mean closure rates for large banks
+cat("Large banks - Mean closure rates by period:\n")
+for(i in 1:length(yr_range)) {
+  mean_close <- mean(branch_sample[large_bank == 1 & yr %in% yr_range[[i]]]$closed, na.rm = TRUE)
+  cat(names(yr_range)[i], ":", round(mean_close * 100, 3), "%\n")
+}
+
+cat("\n")
+
+# Display results
+etable(
+  closure_large_by_regime,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  headers = list("2001-07" = 2, "2008-11" = 2, "2012-19" = 2, "2020-23" = 2),
+  dict = c("deposit_beta" = "Deposit beta"),
+  depvar = FALSE
+)
+
+cat("\n\n")
+
+# Small banks - closures by regime
+closure_small_by_regime <- list(
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample[large_bank == 0 & yr %in% yr_range[[1]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample[large_bank == 0 & yr %in% yr_range[[1]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample[large_bank == 0 & yr %in% yr_range[[2]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample[large_bank == 0 & yr %in% yr_range[[2]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample[large_bank == 0 & yr %in% yr_range[[3]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample[large_bank == 0 & yr %in% yr_range[[3]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = branch_sample[large_bank == 0 & yr %in% yr_range[[4]]], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = branch_sample[large_bank == 0 & yr %in% yr_range[[4]]], vcov = ~RSSDID)
+)
+
+# Display mean closure rates for small banks
+cat("Small banks - Mean closure rates by period:\n")
+for(i in 1:length(yr_range)) {
+  mean_close <- mean(branch_sample[large_bank == 0 & yr %in% yr_range[[i]]]$closed, na.rm = TRUE)
+  cat(names(yr_range)[i], ":", round(mean_close * 100, 3), "%\n")
+}
+
+cat("\n")
+
+# Display results
+etable(
+  closure_small_by_regime,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  headers = list("2001-07" = 2, "2008-11" = 2, "2012-19" = 2, "2020-23" = 2),
+  dict = c("deposit_beta" = "Deposit beta"),
+  depvar = FALSE
+)
+
+# LaTeX versions (uncomment to use)
+# etable(
+#   closure_large_by_regime,
+#   se.below = TRUE,
+#   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#   headers = list("2001-07" = 2, "2008-11" = 2, "2012-19" = 2, "2020-23" = 2),
+#   dict = c("deposit_beta" = "Deposit beta"),
+#   depvar = FALSE,
+#   tex = TRUE,
+#   style.tex = style.tex("aer")
+# )
+# 
+# etable(
+#   closure_small_by_regime,
+#   se.below = TRUE,
+#   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#   headers = list("2001-07" = 2, "2008-11" = 2, "2012-19" = 2, "2020-23" = 2),
+#   dict = c("deposit_beta" = "Deposit beta"),
+#   depvar = FALSE,
+#   tex = TRUE,
+#   style.tex = style.tex("aer")
+# )
+```
+
+# Branch Visit Patterns
+
+
+
+## Closures and Branch Usage (Pandemic Era)
+
+Examine how changes in branch usage during the pandemic relate to closure decisions:
+
+```{r}
+#| label: prepare-branch-usage
+
+# Load branch visit data (SafeGraph)
+branch_visits <- readRDS(file.path(data_dir, "bank_branch_visits_count_2019_2022.rds"))
+branch_visits[, yr := year(DATE_RANGE_START)]
+branch_visits <- branch_visits[yr %in% c(2019, 2021)]
+
+# Load branch characteristics to get zip codes
+branch_chars <- readRDS('C:/OneDrive/data/fdic_sod_1995_2025_simple.rds')
+branch_chars <- data.table(branch_chars)
+if("YEAR" %in% names(branch_chars)) setnames(branch_chars, "YEAR", "yr")
+if("ZIPBR" %in% names(branch_chars)) setnames(branch_chars, "ZIPBR", "zip")
+
+# Get unique UNINUMBR-zip combinations (use most recent year for each branch)
+branch_zip <- branch_chars[order(UNINUMBR, -yr)][, .SD[1], by = UNINUMBR][, .(UNINUMBR, zip)]
+
+# Merge branch visits with zip codes
+branch_visits <- merge(branch_visits, branch_zip, by = "UNINUMBR")
+
+# Calculate average distance from home in 2019 (pre-pandemic baseline)
+distance <- branch_visits[yr == 2019, .(distance_km = mean(DISTANCE_FROM_HOME, na.rm = TRUE) / 1000), 
+                         by = zip]
+
+# Aggregate visits to zip level for zips with 5+ branches
+branch_visits <- branch_visits[, .(no_branches = .N, number_of_visits = sum(RAW_VISIT_COUNTS, na.rm = TRUE)), 
+                               by = .(zip, yr)]
+branch_visits <- branch_visits[no_branches > 4]
+
+# Calculate change in visits between 2019 and 2021
+branch_visits <- dcast(branch_visits, zip ~ yr, value.var = "number_of_visits")
+branch_visits[, change_visits := (`2019` - `2021`) / `2019`]
+
+# Merge with distance and winsorize
+branch_visits <- merge(branch_visits, distance, by = "zip")
+branch_visits[, change_visits := Winsorize(change_visits, 
+                                           quantile(change_visits, probs = c(0.01, 0.99), na.rm = TRUE))]
+branch_visits[, distance_km := Winsorize(distance_km, 
+                                         quantile(distance_km, probs = c(0.01, 0.99), na.rm = TRUE))]
+branch_visits[, zip := str_pad(zip, 5, "left", "0")]
+
+cat("Branch usage data prepared for", nrow(branch_visits), "zip codes\n")
+```
+
+```{r}
+#| label: tbl-closure-usage
+
+# Merge branch sample with usage data for 2020-2023 period
+closures <- merge(branch_sample[yr >= 2020], 
+                 branch_visits[, c("zip", "change_visits", "distance_km")], 
+                 by = "zip")
+
+# Update fixed effects for this subsample
+closures[, bank_year := paste(RSSDID, yr)]
+closures[, state_year := paste(substr(STCNTYBR, 1, 2), yr)]
+
+# Display mean closure rates
+cat("Mean closure rates (2020-2023):\n")
+cat("All banks:", round(mean(closures$closed, na.rm = TRUE) * 100, 3), "%\n")
+cat("Large banks:", round(mean(closures[large_bank == 1]$closed, na.rm = TRUE) * 100, 3), "%\n")
+cat("Small banks:", round(mean(closures[large_bank == 0]$closed, na.rm = TRUE) * 100, 3), "%\n\n")
+
+# Regressions with usage variables
+closure_usage_full <- list(
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = closures, vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = closures, vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_state_closure, 
+        data = closures, vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_county_closure, 
+        data = closures, vcov = ~RSSDID)
+)
+
+cat("Full sample results:\n")
+etable(
+  closure_usage_full,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  headers = list("Baseline" = 2, "With Usage" = 2),
+  dict = c("deposit_beta" = "Deposit beta", "change_visits" = "Drop in visits", 
+           "log(distance_km)" = "Log(Distance)"),
+  depvar = FALSE
+)
+
+cat("\n\n")
+
+# By bank size
+closure_usage_by_size <- list(
+  # Large banks
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = closures[large_bank == 1], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = closures[large_bank == 1], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_state_closure, 
+        data = closures[large_bank == 1], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_county_closure, 
+        data = closures[large_bank == 1], vcov = ~RSSDID),
+  # Small banks
+  feols(closed ~ deposit_beta + ..ctrl_state_closure, 
+        data = closures[large_bank == 0], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + ..ctrl_county_closure, 
+        data = closures[large_bank == 0], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_state_closure, 
+        data = closures[large_bank == 0], vcov = ~RSSDID),
+  feols(closed ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_county_closure, 
+        data = closures[large_bank == 0], vcov = ~RSSDID)
+)
+
+cat("Results by bank size:\n")
+etable(
+  closure_usage_by_size,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  headers = list("Large Banks" = 4, "Small Banks" = 4),
+  dict = c("deposit_beta" = "Deposit beta", "change_visits" = "Drop in visits", 
+           "log(distance_km)" = "Log(Distance)"),
+  depvar = FALSE
+)
+
+# LaTeX versions (uncomment to use)
+# etable(
+#   closure_usage_full,
+#   se.below = TRUE,
+#   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#   headers = list("Baseline" = 2, "With Usage" = 2),
+#   dict = c("deposit_beta" = "Deposit beta", "change_visits" = "Drop in visits", 
+#            "log(distance_km)" = "Log(Distance)"),
+#   depvar = FALSE,
+#   tex = TRUE,
+#   style.tex = style.tex("aer")
+# )
+```
+
+## Reduced Form: Demographics and Closures
+
+Test whether depositor characteristics directly predict closures (without deposit beta):
+
+```{r}
+#| label: tbl-closure-reduced-form
+
+# Coefficient labels
+rf_dict <- c(
+  "college_frac" = "College frac",
+  "dividend_frac" = "Stock market frac",
+  "log(family_income)" = "Log(Income)",
+  "sophisticated" = "Sophisticated zipcode",
+  "factor_age_bin2" = "Age Q1-Q2",
+  "factor_age_bin3" = "Age Q2-Q3",
+  "factor_age_bin4" = "Age >Q3",
+  "lag_county_deposit_hhi" = "County deposit HHI",
+  "population_density" = "Population density"
+)
+
+# Pooled reduced form regressions
+closure_rf <- list(
+  feols(closed ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + 
+        lag_county_deposit_hhi + population_density + ..ctrl_state_closure,
+        data = branch_sample[!is.na(deposit_beta)], vcov = ~RSSDID),
+  feols(closed ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + 
+        ..ctrl_county_closure,
+        data = branch_sample[!is.na(deposit_beta)], vcov = ~RSSDID),
+  feols(closed ~ factor_age_bin + log(family_income) + sophisticated + 
+        lag_county_deposit_hhi + population_density + ..ctrl_state_closure,
+        data = branch_sample[!is.na(deposit_beta)], vcov = ~RSSDID),
+  feols(closed ~ factor_age_bin + log(family_income) + sophisticated + 
+        ..ctrl_county_closure,
+        data = branch_sample[!is.na(deposit_beta)], vcov = ~RSSDID)
+)
+
+cat("Pooled reduced form results:\n")
+etable(
+  closure_rf,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  dict = rf_dict,
+  depvar = FALSE
+)
+
+cat("\n\n")
+
+# By bank size
+closure_rf_by_size <- list(
+  # Large banks - demographics
+  feols(closed ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + 
+        lag_county_deposit_hhi + population_density + ..ctrl_state_closure,
+        data = branch_sample[large_bank == 1 & !is.na(deposit_beta)], vcov = ~RSSDID),
+  feols(closed ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + 
+        ..ctrl_county_closure,
+        data = branch_sample[large_bank == 1 & !is.na(deposit_beta)], vcov = ~RSSDID),
+  # Small banks - demographics
+  feols(closed ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + 
+        lag_county_deposit_hhi + population_density + ..ctrl_state_closure,
+        data = branch_sample[large_bank == 0 & !is.na(deposit_beta)], vcov = ~RSSDID),
+  feols(closed ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + 
+        ..ctrl_county_closure,
+        data = branch_sample[large_bank == 0 & !is.na(deposit_beta)], vcov = ~RSSDID),
+  # Large banks - sophistication
+  feols(closed ~ factor_age_bin + log(family_income) + sophisticated + 
+        lag_county_deposit_hhi + population_density + ..ctrl_state_closure,
+        data = branch_sample[large_bank == 1 & !is.na(deposit_beta)], vcov = ~RSSDID),
+  feols(closed ~ factor_age_bin + log(family_income) + sophisticated + 
+        ..ctrl_county_closure,
+        data = branch_sample[large_bank == 1 & !is.na(deposit_beta)], vcov = ~RSSDID),
+  # Small banks - sophistication
+  feols(closed ~ factor_age_bin + log(family_income) + sophisticated + 
+        lag_county_deposit_hhi + population_density + ..ctrl_state_closure,
+        data = branch_sample[large_bank == 0 & !is.na(deposit_beta)], vcov = ~RSSDID),
+  feols(closed ~ factor_age_bin + log(family_income) + sophisticated + 
+        ..ctrl_county_closure,
+        data = branch_sample[large_bank == 0 & !is.na(deposit_beta)], vcov = ~RSSDID)
+)
+
+cat("Results by bank size:\n")
+etable(
+  closure_rf_by_size,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  headers = list("Large Banks" = 4, "Small Banks" = 4),
+  dict = rf_dict,
+  depvar = FALSE
+)
+
+# LaTeX versions (uncomment to use)
+# etable(
+#   closure_rf,
+#   se.below = TRUE,
+#   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#   dict = rf_dict,
+#   depvar = FALSE,
+#   tex = TRUE,
+#   style.tex = style.tex("aer")
+# )
+# 
+# etable(
+#   closure_rf_by_size,
+#   se.below = TRUE,
+#   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#   headers = list("Large Banks" = 4, "Small Banks" = 4),
+#   dict = rf_dict,
 #   depvar = FALSE,
 #   tex = TRUE,
 #   style.tex = style.tex("aer")

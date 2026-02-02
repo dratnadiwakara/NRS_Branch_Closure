@@ -15,7 +15,7 @@ library(ggplot2)
 # ==============================================================================
 
 # Data created by: https://github.com/dratnadiwakara/r-utilities/blob/main/fdic-api/sod_download_all_data_to_rds.R
-branch_year <- readRDS('C:/OneDrive/data/fdic_sod_2000_2025_simple.rds')
+branch_year <- readRDS('C:/OneDrive/data/fdic_sod_1995_2025_simple.rds')
 branch_year <- data.table(branch_year)
 
 # Standardize column names
@@ -63,6 +63,7 @@ closure_data <- branch_year %>%
 # Replace NAs with 0 for indicator variables
 closure_data[is.na(merged_1_year), merged_1_year := 0]
 closure_data[is.na(merged_last_3_yrs), merged_last_3_yrs := 0]
+closure_data[is.na(legacy_branch), legacy_branch := 1] # ~90% of branches are legacy branches
 closure_data <- closure_data[yr < 2025] 
 # ==============================================================================
 # 3. Create Closure Rate Plot
@@ -154,5 +155,8 @@ branch_df[is.na(same_zip_prior_3yr_branches), same_zip_prior_3yr_branches := 0]
 # ==============================================================================
 # 6. Save Output
 # ==============================================================================
+
+# Restrict to years 2000-2024 for final output
+branch_df <- branch_df[yr >= 2000 & yr <= 2024]
 
 saveRDS(branch_df, file = "C:/OneDrive/data/nrs_branch_closure/branch_closure_panel.rds")

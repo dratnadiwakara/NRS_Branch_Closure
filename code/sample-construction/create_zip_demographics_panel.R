@@ -12,65 +12,11 @@ library(tidycensus)
 data_dir <- "C:/OneDrive/data/nrs_branch_closure"
 
 # ==============================================================================
-# 1. Download and Process ACS Data
+# 1. Load Pre-Aggregated ACS Data
 # ==============================================================================
 
-states <- c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
-            "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
-            "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
-            "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-            "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY")
-
-# ACS variables to retrieve
-acs_vars <- c(
-  median_income = "B19013_001",          # Median household income
-  pct_college_educated = "B23006_023",   # Bachelor's degree (age 25+)
-  total_education = "B23006_001",        # Total population 25+
-  median_age = "B01002_001"              # Median age
-)
-
-# Download ACS data for all states and years
-all_states_data <- list()
-
-for(yr in 2010:2023) {
-  for (state in states) {
-    state_yr <- paste(state, yr)
-    message("Getting data for state: ", state_yr)
-    
-    state_data <- get_acs(
-      geography = "tract",
-      variables = acs_vars,
-      state = state,
-      year = yr,
-      survey = "acs5",
-      output = "wide"
-    )
-    
-    state_data <- data.table(state_data)
-    state_data[, yr := yr]
-    
-    all_states_data[[state_yr]] <- state_data
-  }
-}
-
-acs_data_combined <- rbindlist(all_states_data, fill = TRUE)
-
-# Process ACS data
-acs_data <- acs_data_combined %>%
-  mutate(
-    pct_college_educated = 100 * (pct_college_educatedE / total_educationE),
-    median_income = median_incomeE,
-    median_age = median_ageE
-  ) %>%
-  select(yr, GEOID, median_income, pct_college_educated, median_age) %>%
-  rename(tract = GEOID) %>%
-  data.table()
-
-# ZIP-Tract crosswalk (HUD - https://www.huduser.gov/portal/datasets/usps_crosswalk.html)
-tract_zip_crosswalk <- fread(file.path(data_dir, "ZIP_TRACT_032019.csv"))
-tract_zip_crosswalk[, zip := str_pad(zip, 5, "left", "0")]
-tract_zip_crosswalk[, tract := as.character(tract)]
-tract_zip_crosswalk[, tract := str_pad(tract, 11, "left", "0")]
+# Read pre-aggregated zip-level ACS data (created by code below)
+zip_aggregated_data <- readRDS(file.path(data_dir, "zip_aggregated_acs_data.rds"))
 
 # IRS SOI data (IRS - https://www.irs.gov/statistics/soi-tax-stats-individual-income-tax-statistics-zip-code-data-soi)
 irs_data <- readRDS(file.path(data_dir, "irs_data.rds"))
@@ -83,23 +29,83 @@ temp_2023[, yr := 2023]
 irs_data <- rbind(irs_data, temp_2023)
 
 # ==============================================================================
-# 2. Aggregate ACS from Tract to Zip Level
+# CODE TO DOWNLOAD AND AGGREGATE ACS DATA (COMMENTED - RUN ONCE TO CREATE FILE)
 # ==============================================================================
-
-# Join ACS data with ZIP-tract crosswalk
-acs_with_zip <- acs_data %>%
-  left_join(tract_zip_crosswalk[, c("zip", "tract", "tot_ratio")], by = c("tract" = "tract"))
-
-# Aggregate to zip level using weighted averages
-zip_aggregated_data <- acs_with_zip %>%
-  group_by(zip, yr) %>%
-  summarize(
-    median_income = sum(median_income * tot_ratio, na.rm = TRUE),
-    pct_college_educated = sum(pct_college_educated * tot_ratio, na.rm = TRUE),
-    median_age = sum(median_age * tot_ratio, na.rm = TRUE),
-    .groups = 'drop'
-  ) %>%
-  data.table()
+# 
+# states <- c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+#             "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+#             "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+#             "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+#             "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY")
+# 
+# # ACS variables to retrieve
+# acs_vars <- c(
+#   median_income = "B19013_001",          # Median household income
+#   pct_college_educated = "B23006_023",   # Bachelor's degree (age 25+)
+#   total_education = "B23006_001",        # Total population 25+
+#   median_age = "B01002_001"              # Median age
+# )
+# 
+# # Download ACS data for all states and years
+# all_states_data <- list()
+# 
+# for(yr in 2010:2023) {
+#   for (state in states) {
+#     state_yr <- paste(state, yr)
+#     message("Getting data for state: ", state_yr)
+# 
+#     state_data <- get_acs(
+#       geography = "tract",
+#       variables = acs_vars,
+#       state = state,
+#       year = yr,
+#       survey = "acs5",
+#       output = "wide"
+#     )
+# 
+#     state_data <- data.table(state_data)
+#     state_data[, yr := yr]
+# 
+#     all_states_data[[state_yr]] <- state_data
+#   }
+# }
+# 
+# acs_data_combined <- rbindlist(all_states_data, fill = TRUE)
+# 
+# # Process ACS data
+# acs_data <- acs_data_combined %>%
+#   mutate(
+#     pct_college_educated = 100 * (pct_college_educatedE / total_educationE),
+#     median_income = median_incomeE,
+#     median_age = median_ageE
+#   ) %>%
+#   select(yr, GEOID, median_income, pct_college_educated, median_age) %>%
+#   rename(tract = GEOID) %>%
+#   data.table()
+# 
+# # ZIP-Tract crosswalk (HUD - https://www.huduser.gov/portal/datasets/usps_crosswalk.html)
+# tract_zip_crosswalk <- fread(file.path(data_dir, "ZIP_TRACT_032019.csv"))
+# tract_zip_crosswalk[, zip := str_pad(zip, 5, "left", "0")]
+# tract_zip_crosswalk[, tract := as.character(tract)]
+# tract_zip_crosswalk[, tract := str_pad(tract, 11, "left", "0")]
+# 
+# # Join ACS data with ZIP-tract crosswalk
+# acs_with_zip <- acs_data %>%
+#   left_join(tract_zip_crosswalk[, c("zip", "tract", "tot_ratio")], by = c("tract" = "tract"))
+# 
+# # Aggregate to zip level using weighted averages
+# zip_aggregated_data <- acs_with_zip %>%
+#   group_by(zip, yr) %>%
+#   summarize(
+#     median_income = sum(median_income * tot_ratio, na.rm = TRUE),
+#     pct_college_educated = sum(pct_college_educated * tot_ratio, na.rm = TRUE),
+#     median_age = sum(median_age * tot_ratio, na.rm = TRUE),
+#     .groups = 'drop'
+#   ) %>%
+#   data.table()
+# 
+# # Save aggregated data for future use
+# saveRDS(zip_aggregated_data, file = file.path(data_dir, "zip_aggregated_acs_data.rds"))
 
 # ==============================================================================
 # 3. Merge ACS and IRS Data
@@ -150,24 +156,34 @@ zip_demo_data <- zip_demo_data[, c("zip", "yr", "median_income", "median_age",
                                    "age_bin")]
 
 # ==============================================================================
-# 5. Extend Data Backward (2000-2009) and Forward (2023-2025)
+# 5. Fill Missing Values and Extend to Complete Panel (2000-2025)
 # ==============================================================================
 
-# Backward fill: Use 2010 data for 2000-2009
-temp_2010 <- zip_demo_data[yr == 2010]
-for(y in 2000:2009) {
-  temp <- copy(temp_2010)
-  temp[, yr := y]
-  zip_demo_data <- rbind(zip_demo_data, temp)
-}
+# Get all unique zip codes
+all_zips <- unique(zip_demo_data$zip)
 
+# Create complete zip-year panel (2000-2025)
+complete_panel <- CJ(zip = all_zips, yr = 2000:2025)
 
-# Extend 2023 to 2024-2025
-temp_2023 <- zip_demo_data[yr == 2023]
-for(y in 2024:2025) {
-  temp <- copy(temp_2023)
-  temp[, yr := y]
-  zip_demo_data <- rbind(zip_demo_data, temp)
+# Merge with existing data
+zip_demo_data <- merge(complete_panel, zip_demo_data, 
+                      by = c("zip", "yr"), all.x = TRUE)
+
+# Identify demographic variables to fill
+demo_vars <- c("median_income", "median_age", "pct_college_educated", 
+               "capital_gain_frac", "dividend_frac", "sophisticated", 
+               "sophisticated_acs_only", "sophisticated_old", "age_bin")
+
+# Fill missing values within each zip using forward then backward fill
+zip_demo_data <- zip_demo_data[order(zip, yr)]
+
+for(var in demo_vars) {
+  # Forward fill (last observation carried forward)
+  zip_demo_data[, (var) := nafill(get(var), type = "locf"), by = zip]
+  # Backward fill for any remaining NAs at the start
+  zip_demo_data[, (var) := nafill(get(var), type = "nocb"), by = zip]
+  # Do another forward fill pass to ensure 2024-2025 are filled
+  zip_demo_data[, (var) := nafill(get(var), type = "locf"), by = zip]
 }
 
 # ==============================================================================

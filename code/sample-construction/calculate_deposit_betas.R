@@ -141,7 +141,7 @@ for(cycle_name in names(cycles)) {
   reg <- feols(
     deposit_exp_chg ~ factor_age_bin + log(family_income) + dividend_frac + college_frac +
       bank_hhi + log(bank_assets) + population_density + trans_accts_frac_assets + uninsured_deposits_frac,
-    data = cycle_data
+    data = cycle_data,
   )
   
   # Regression: sophistication -> deposit beta
