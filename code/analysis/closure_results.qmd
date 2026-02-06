@@ -332,6 +332,443 @@ print(g)
 #        width = 5, height = 3)
 ```
 
+# Beta Correlations Across Cycles
+
+## Branch-Level Correlations
+
+### Mid Cycle vs Late Cycle
+
+Scatter plot showing correlation of deposit betas between mid cycle (2016-2019) and late cycle (2022-2024) at the branch level:
+
+```{r}
+#| label: fig-beta-correlation-branch-mid-late
+#| fig-cap: "Branch-Level Deposit Beta: Mid Cycle vs Late Cycle"
+#| fig-width: 4
+#| fig-height: 3.5
+
+# Prepare data: get deposit betas for 2019-2020
+temp <- branch_sample[yr %in% 2019:2020, c("UNINUMBR", "yr", "deposit_beta", "large_bank")]
+temp <- dcast(temp, UNINUMBR + large_bank ~ yr, value.var = "deposit_beta", fun.aggregate = mean)
+names(temp) <- c("UNINUMBR", "large_bank", "cycle1619", "cycle2224")
+
+# Create scatter plot
+g <- ggplot(temp[cycle1619 > 0.08 & cycle1619 < 0.4], aes(x = cycle1619, y = cycle2224)) +
+  geom_point(aes(color = factor(large_bank)), alpha = 0.2) +
+  geom_smooth(method = "lm") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  scale_color_manual(
+    values = c("1" = "dodgerblue4", "0" = "tan2"),
+    labels = c("1" = "Large banks", "0" = "Small banks")
+  ) +
+  labs(x = "Deposit Beta - Mid Cycle", y = "Deposit Beta - Late Cycle") +
+  theme_minimal() +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+print(g)
+
+# Uncomment to save
+# ggsave(file.path(data_dir, "../figures/df_scatter_branch_mid_late.jpg"), g, 
+#        width = 4, height = 3.5)
+```
+
+### Early Cycle vs Mid Cycle
+
+Scatter plot showing correlation of deposit betas between early cycle (2004-2006) and mid cycle (2016-2019) at the branch level:
+
+```{r}
+#| label: fig-beta-correlation-branch-early-mid
+#| fig-cap: "Branch-Level Deposit Beta: Early Cycle vs Mid Cycle"
+#| fig-width: 4
+#| fig-height: 3.5
+
+# Prepare data: get deposit betas for 2006 and 2019
+temp <- branch_sample[yr %in% c(2006, 2019) & is.finite(deposit_beta), 
+                      c("UNINUMBR", "yr", "deposit_beta", "large_bank")]
+temp <- dcast(temp, UNINUMBR + large_bank ~ yr, value.var = "deposit_beta", fun.aggregate = mean)
+names(temp) <- c("UNINUMBR", "large_bank", "cycle0406", "cycle1619")
+
+# Create scatter plot
+g <- ggplot(temp, aes(x = cycle0406, y = cycle1619)) +
+  geom_point(aes(color = factor(large_bank)), alpha = 0.2) +
+  geom_smooth(method = "lm") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  scale_color_manual(
+    values = c("1" = "dodgerblue4", "0" = "tan2"),
+    labels = c("1" = "Large banks", "0" = "Small banks")
+  ) +
+  labs(x = "Deposit Beta - Early Cycle", y = "Deposit Beta - Mid Cycle") +
+  theme_minimal() +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+print(g)
+
+# Uncomment to save
+# ggsave(file.path(data_dir, "../figures/df_scatter_branch_early_mid.jpg"), g, 
+#        width = 4, height = 3.5)
+```
+
+## Bank-Level Correlations
+
+### Early Cycle vs Mid Cycle
+
+Scatter plot showing correlation of deposit betas between early and mid cycles at the bank level:
+
+```{r}
+#| label: fig-beta-correlation-bank-early-mid
+#| fig-cap: "Bank-Level Deposit Beta: Early Cycle vs Mid Cycle"
+#| fig-width: 4
+#| fig-height: 3.5
+
+# Prepare bank-level data across all cycles
+beta_density_bank <- data.table()
+for(i in 1:length(beta_cycles)) {
+  cycle_nm <- names(beta_cycles)[[i]]
+  cycle <- beta_cycles[[i]]
+  temp <- cycle$data[, .(ID_RSSD, deposit_beta)]
+  temp[, large_bank := ifelse(ID_RSSD %in% large_banks, 1, 0)]
+  temp[, cycle := cycle_nm]
+  beta_density_bank <- rbind(beta_density_bank, temp)
+}
+
+# Reshape to wide format
+beta_density_bank <- dcast(beta_density_bank, ID_RSSD + large_bank ~ cycle, 
+                           value.var = "deposit_beta", fun.aggregate = mean)
+beta_density_bank <- beta_density_bank[complete.cases(beta_density_bank)]
+setnames(beta_density_bank, c("cycle_0406", "cycle_1619", "cycle_2224"), 
+         c("early", "mid", "late"))
+
+# Create scatter plot: early vs mid
+g1 <- ggplot(beta_density_bank, aes(x = early, y = mid)) +
+  geom_point(aes(color = factor(large_bank), size = factor(large_bank)), alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  scale_size_manual(
+    values = c("1" = 2, "0" = 1),
+    labels = c("1" = "Large banks", "0" = "Small banks")
+  ) +
+  scale_color_manual(
+    values = c("1" = "dodgerblue4", "0" = "tan2"),
+    labels = c("1" = "Large banks", "0" = "Small banks")
+  ) +
+  labs(x = "Deposit Beta - Early Cycle", y = "Deposit Beta - Mid Cycle") +
+  theme_minimal() +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+print(g1)
+
+# Uncomment to save
+# ggsave(file.path(data_dir, "../figures/df_scatter_bank_early_mid.jpg"), g1, 
+#        width = 4, height = 3.5)
+```
+
+### Mid Cycle vs Late Cycle
+
+Scatter plot showing correlation of deposit betas between mid and late cycles at the bank level:
+
+```{r}
+#| label: fig-beta-correlation-bank-mid-late
+#| fig-cap: "Bank-Level Deposit Beta: Mid Cycle vs Late Cycle"
+#| fig-width: 4
+#| fig-height: 3.5
+
+# Create scatter plot: mid vs late
+g2 <- ggplot(beta_density_bank, aes(x = mid, y = late)) +
+  geom_point(aes(color = factor(large_bank), size = factor(large_bank)), alpha = 0.5) +
+  geom_smooth(method = "lm") +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+  scale_size_manual(
+    values = c("1" = 2, "0" = 1),
+    labels = c("1" = "Large banks", "0" = "Small banks")
+  ) +
+  scale_color_manual(
+    values = c("1" = "dodgerblue4", "0" = "tan2"),
+    labels = c("1" = "Large banks", "0" = "Small banks")
+  ) +
+  labs(x = "Deposit Beta - Mid Cycle", y = "Deposit Beta - Late Cycle") +
+  theme_minimal() +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+print(g2)
+
+# Uncomment to save
+# ggsave(file.path(data_dir, "../figures/df_scatter_bank_mid_late.jpg"), g2, 
+#        width = 4, height = 3.5)
+```
+
+# Deposit Beta and Closure Rates (Univariate)
+
+Examining the relationship between deposit beta deciles and branch closure rates across different time periods:
+
+```{r}
+#| label: fig-univariate-beta-closure
+#| fig-cap: "Branch Closure Rates by Deposit Beta Decile Across Cycles"
+#| fig-width: 5
+#| fig-height: 3.5
+
+# Prepare data with cycles and beta deciles
+temp <- copy(branch_sample)
+temp[, cycle := ifelse(yr >= 2020, 1, ifelse(yr >= 2014, 2, 3))]
+temp[, beta_q := ntile(deposit_beta, 10), by = .(yr)]
+
+# Calculate closure rates by beta decile for each cycle
+temp1 <- temp[yr %in% 2020:2023, .(frac_branches_closed = mean(closed)), by = beta_q]
+temp1[, cycle := "Late Cycle"]
+
+temp2 <- temp[yr %in% 2015:2019, .(frac_branches_closed = mean(closed, na.rm = TRUE)), by = beta_q]
+temp2[, cycle := "Mid Cycle"]
+
+temp3 <- temp[yr %in% 2001:2014, .(frac_branches_closed = mean(closed, na.rm = TRUE)), by = beta_q]
+temp3[, cycle := "Early Cycle"]
+
+# Combine and winsorize
+temp <- rbind(temp1, temp2, temp3)
+temp[, frac_branches_closed := Winsorize(frac_branches_closed, 
+                                         quantile(frac_branches_closed, probs = c(0.05, 0.95), na.rm = TRUE)), 
+     by = .(beta_q, cycle)]
+
+# Create plot
+g <- ggplot(temp, aes(x = beta_q, y = frac_branches_closed * 100, color = cycle)) +
+  geom_point(size = 3, alpha = 0.75, aes(shape = cycle)) +
+  scale_x_continuous(n.breaks = 10) +
+  scale_color_manual(
+    values = c("Late Cycle" = "dodgerblue4",
+               "Mid Cycle" = "tan2",
+               "Early Cycle" = "gray")
+  ) +
+  ylim(c(1, 6)) +
+  theme_minimal() +
+  labs(x = "Deposit Beta Decile", y = "Percent of branches closed (%)") +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+print(g)
+
+# Uncomment to save
+# ggsave(file.path(data_dir, "../figures/univar_branch.jpg"), g, 
+#        width = 5, height = 3.5)
+```
+
+# Descriptive Statistics: Branch Closure Sample
+
+Summary statistics for the branch closure analysis sample, comparing large and small banks across different time periods:
+
+## Panel A: Large Banks
+
+```{r}
+#| label: tbl-desc-stats-large-banks
+#| tbl-cap: "Descriptive Statistics - Large Banks"
+#| results: asis
+
+# Prepare data
+temp <- copy(branch_sample[is.finite(deposit_beta) & DEPSUMBR > 0 & is.finite(DEPSUMBR)])
+temp[, lag_branch_deposit_amount := floor(lag_branch_deposit_amount / 1000)]
+temp[, log_deposits := log(DEPSUMBR)]
+# Remove any remaining -Inf values
+temp <- temp[is.finite(log_deposits)]
+
+# Rename variables
+setnames(temp,
+         c("closed", "deposit_beta", "lag_branch_deposit_amount", "log_deposits", 
+           "lag_county_deposit_gr", "lag_hmda_mtg_amt_gr", "lag_cra_loan_amount_amt_lt_1m_gr", 
+           "lag_establishment_gr", "lag_payroll_gr", "same_zip_prior_3yr_branches", 
+           "legacy_branch", "population_density", "lmi"),
+         new_names <- c("Closed", "Deposit Beta", "Deposits (mn)", "log(Deposits)", 
+                        "Deposit 3yr growth", "Mortgage 3yr growth", "CRA 3yr growth", 
+                        "Establishments 3yr growth", "Payroll 3yr growth", 
+                        "Acq. branch/presence", "Branch owned 3plus years", 
+                        "Population density (1k km)", "Low to Moderate Income Area"))
+
+# Calculate within-FE standard deviations for mid cycle (2019)
+temp_df_mid <- copy(branch_sample[is.finite(deposit_beta) & DEPSUMBR > 0 & is.finite(DEPSUMBR) & yr == 2019 & large_bank == 1])
+temp_df_mid[, log_deposits := log(DEPSUMBR)]
+temp_df_mid <- temp_df_mid[is.finite(log_deposits)]
+
+reg_beta <- feols(deposit_beta ~ 0 | county_yr + bank_yr, temp_df_mid)
+temp_df_mid[, pred_deposit_beta := predict(reg_beta, newdata = temp_df_mid)]
+temp_df_mid[, resid_deposit_beta := deposit_beta - pred_deposit_beta]
+sd_within_beta_mid <- sd(temp_df_mid$resid_deposit_beta, na.rm = TRUE)
+
+reg_log <- feols(log_deposits ~ 0 | county_yr + bank_yr, temp_df_mid)
+temp_df_mid[, pred_log_deposits := predict(reg_log, newdata = temp_df_mid)]
+temp_df_mid[, resid_log_deposits := log_deposits - pred_log_deposits]
+sd_within_log_mid <- sd(temp_df_mid$resid_log_deposits, na.rm = TRUE)
+
+# Calculate within-FE standard deviations for early cycle (2012)
+temp_df_early <- copy(branch_sample[is.finite(deposit_beta) & DEPSUMBR > 0 & is.finite(DEPSUMBR) & yr == 2012 & large_bank == 1])
+temp_df_early[, log_deposits := log(DEPSUMBR)]
+temp_df_early <- temp_df_early[is.finite(log_deposits)]
+
+reg_beta <- feols(deposit_beta ~ 0 | county_yr + bank_yr, temp_df_early)
+temp_df_early[, pred_deposit_beta := predict(reg_beta, newdata = temp_df_early)]
+temp_df_early[, resid_deposit_beta := deposit_beta - pred_deposit_beta]
+sd_within_beta_early <- sd(temp_df_early$resid_deposit_beta, na.rm = TRUE)
+
+reg_log <- feols(log_deposits ~ 0 | county_yr + bank_yr, temp_df_early)
+temp_df_early[, pred_log_deposits := predict(reg_log, newdata = temp_df_early)]
+temp_df_early[, resid_log_deposits := log_deposits - pred_log_deposits]
+sd_within_log_early <- sd(temp_df_early$resid_log_deposits, na.rm = TRUE)
+
+# Mid cycle stats (2019)
+temp1 <- summary_stats_function(temp[large_bank == 1 & yr == 2019], new_names)
+temp1 <- temp1 %>% select(-P25, -P50, -P75, -Obs) %>% data.table()
+temp1[, `SD (within)` := NA_real_]
+temp1[Variable == "Deposit Beta", `SD (within)` := sd_within_beta_mid]
+temp1[Variable == "log(Deposits)", `SD (within)` := sd_within_log_mid]
+temp1 <- temp1[, .(Variable, Mean, SD, `SD (within)`, P10, P90)]
+
+# Early cycle stats (2012)
+temp2 <- summary_stats_function(temp[large_bank == 1 & yr == 2012], new_names)
+temp2 <- temp2 %>% select(-P25, -P50, -P75, -Obs) %>% data.table()
+temp2[, `SD (within)` := NA_real_]
+temp2[Variable == "Deposit Beta", `SD (within)` := sd_within_beta_early]
+temp2[Variable == "log(Deposits)", `SD (within)` := sd_within_log_early]
+temp2 <- temp2[, .(Variable, Mean, SD, `SD (within)`, P10, P90)]
+
+# Merge tables
+result_large <- merge(temp1, temp2, by = "Variable", suffixes = c(".mid", ".early"))
+
+# Reorder variables
+variable_order <- c('Closed', 'Deposit Beta', 'log(Deposits)', 
+                   'Acq. branch/presence', 'Branch owned 3plus years',
+                   'Deposit 3yr growth', 'CRA 3yr growth', 
+                   'Establishments 3yr growth', 'Low to Moderate Income Area',
+                   'Mortgage 3yr growth', 'Payroll 3yr growth', 
+                   'Population density (1k km)')
+
+result_large <- result_large[order(factor(Variable, levels = variable_order))]
+
+# Get observation counts
+obs_mid <- nrow(temp[large_bank == 1 & yr == 2019])
+obs_early <- nrow(temp[large_bank == 1 & yr == 2012])
+
+# Print table
+cat("\\begin{table}[htbp]\n")
+cat("\\centering\n")
+cat("\\caption{Descriptive Statistics - Large Banks}\n")
+cat("\\begin{tabular}{l*{10}{c}}\n")
+cat("\\hline\\hline\n")
+cat("& \\multicolumn{5}{c}{Mid Cycle; Year 2019; Obs =", obs_mid, "} & \\multicolumn{5}{c}{Early Cycle; Year 2012; Obs =", obs_early, "} \\\\\n")
+cat("Variable & Mean & SD & SD (within) & P10 & P90 & Mean & SD & SD (within) & P10 & P90 \\\\\n")
+cat("\\hline\n")
+
+for(i in 1:nrow(result_large)) {
+  row <- result_large[i]
+  cat(row$Variable, "&", 
+      sprintf("%.2f", row$Mean.mid), "&",
+      sprintf("%.2f", row$SD.mid), "&",
+      ifelse(is.na(row$`SD (within).mid`), "", sprintf("%.3f", row$`SD (within).mid`)), "&",
+      sprintf("%.2f", row$P10.mid), "&",
+      sprintf("%.2f", row$P90.mid), "&",
+      sprintf("%.2f", row$Mean.early), "&",
+      sprintf("%.2f", row$SD.early), "&",
+      ifelse(is.na(row$`SD (within).early`), "", sprintf("%.3f", row$`SD (within).early`)), "&",
+      sprintf("%.2f", row$P10.early), "&",
+      sprintf("%.2f", row$P90.early), "\\\\\n")
+}
+
+cat("\\hline\\hline\n")
+cat("\\end{tabular}\n")
+cat("\\end{table}\n")
+
+# Also print as kable for viewing
+md_table(result_large)
+```
+
+## Panel B: Small Banks
+
+```{r}
+#| label: tbl-desc-stats-small-banks
+#| tbl-cap: "Descriptive Statistics - Small Banks"
+#| results: asis
+
+# Calculate within-FE standard deviations for mid cycle (2019)
+temp_df_mid <- copy(branch_sample[is.finite(deposit_beta) & DEPSUMBR > 0 & is.finite(DEPSUMBR) & yr == 2019 & large_bank == 0])
+temp_df_mid[, log_deposits := log1p(DEPSUMBR)]
+temp_df_mid <- temp_df_mid[is.finite(log_deposits)]
+
+reg_beta <- feols(deposit_beta ~ 0 | county_yr + bank_yr, temp_df_mid)
+temp_df_mid[, pred_deposit_beta := predict(reg_beta, newdata = temp_df_mid)]
+temp_df_mid[, resid_deposit_beta := deposit_beta - pred_deposit_beta]
+sd_within_beta_mid <- sd(temp_df_mid$resid_deposit_beta, na.rm = TRUE)
+
+reg_log <- feols(log_deposits ~ 0 | county_yr + bank_yr, temp_df_mid)
+temp_df_mid[, pred_log_deposits := predict(reg_log, newdata = temp_df_mid)]
+temp_df_mid[, resid_log_deposits := log_deposits - pred_log_deposits]
+sd_within_log_mid <- sd(temp_df_mid$resid_log_deposits, na.rm = TRUE)
+
+# Calculate within-FE standard deviations for early cycle (2012)
+temp_df_early <- copy(branch_sample[is.finite(deposit_beta) & DEPSUMBR > 0 & is.finite(DEPSUMBR) & yr == 2012 & large_bank == 0])
+temp_df_early[, log_deposits := log(DEPSUMBR)]
+temp_df_early <- temp_df_early[is.finite(log_deposits)]
+
+reg_beta <- feols(deposit_beta ~ 0 | county_yr + bank_yr, temp_df_early)
+temp_df_early[, pred_deposit_beta := predict(reg_beta, newdata = temp_df_early)]
+temp_df_early[, resid_deposit_beta := deposit_beta - pred_deposit_beta]
+sd_within_beta_early <- sd(temp_df_early$resid_deposit_beta, na.rm = TRUE)
+
+reg_log <- feols(log_deposits ~ 0 | county_yr + bank_yr, temp_df_early)
+temp_df_early[, pred_log_deposits := predict(reg_log, newdata = temp_df_early)]
+temp_df_early[, resid_log_deposits := log_deposits - pred_log_deposits]
+sd_within_log_early <- sd(temp_df_early$resid_log_deposits, na.rm = TRUE)
+
+# Mid cycle stats (2019)
+temp1 <- summary_stats_function(temp[large_bank == 0 & yr == 2019 & DEPSUMBR>0], new_names)
+temp1 <- temp1 %>% select(-P25, -P50, -P75, -Obs) %>% data.table()
+temp1[, `SD (within)` := NA_real_]
+temp1[Variable == "Deposit Beta", `SD (within)` := sd_within_beta_mid]
+temp1[Variable == "log(Deposits)", `SD (within)` := sd_within_log_mid]
+temp1 <- temp1[, .(Variable, Mean, SD, `SD (within)`, P10, P90)]
+
+# Early cycle stats (2012)
+temp2 <- summary_stats_function(temp[large_bank == 0 & yr == 2012 & DEPSUMBR>0], new_names)
+temp2 <- temp2 %>% select(-P25, -P50, -P75, -Obs) %>% data.table()
+temp2[, `SD (within)` := NA_real_]
+temp2[Variable == "Deposit Beta", `SD (within)` := sd_within_beta_early]
+temp2[Variable == "log(Deposits)", `SD (within)` := sd_within_log_early]
+temp2 <- temp2[, .(Variable, Mean, SD, `SD (within)`, P10, P90)]
+
+# Merge tables
+result_small <- merge(temp1, temp2, by = "Variable", suffixes = c(".mid", ".early"))
+
+# Reorder variables
+result_small <- result_small[order(factor(Variable, levels = variable_order))]
+
+# Get observation counts
+obs_mid <- nrow(temp[large_bank == 0 & yr == 2019 & DEPSUMBR>0])
+obs_early <- nrow(temp[large_bank == 0 & yr == 2012 & DEPSUMBR>0])
+
+# Print table
+cat("\\begin{table}[htbp]\n")
+cat("\\centering\n")
+cat("\\caption{Descriptive Statistics - Small Banks}\n")
+cat("\\begin{tabular}{l*{10}{c}}\n")
+cat("\\hline\\hline\n")
+cat("& \\multicolumn{5}{c}{Mid Cycle; Year 2019; Obs =", obs_mid, "} & \\multicolumn{5}{c}{Early Cycle; Year 2012; Obs =", obs_early, "} \\\\\n")
+cat("Variable & Mean & SD & SD (within) & P10 & P90 & Mean & SD & SD (within) & P10 & P90 \\\\\n")
+cat("\\hline\n")
+
+for(i in 1:nrow(result_small)) {
+  row <- result_small[i]
+  cat(row$Variable, "&", 
+      sprintf("%.2f", row$Mean.mid), "&",
+      sprintf("%.2f", row$SD.mid), "&",
+      ifelse(is.na(row$`SD (within).mid`), "", sprintf("%.3f", row$`SD (within).mid`)), "&",
+      sprintf("%.2f", row$P10.mid), "&",
+      sprintf("%.2f", row$P90.mid), "&",
+      sprintf("%.2f", row$Mean.early), "&",
+      sprintf("%.2f", row$SD.early), "&",
+      ifelse(is.na(row$`SD (within).early`), "", sprintf("%.3f", row$`SD (within).early`)), "&",
+      sprintf("%.2f", row$P10.early), "&",
+      sprintf("%.2f", row$P90.early), "\\\\\n")
+}
+
+cat("\\hline\\hline\n")
+cat("\\end{tabular}\n")
+cat("\\end{table}\n")
+
+# Also print as kable for viewing
+md_table(result_small)
+```
+
 # Branch Closure Analysis
 
 ## Define Control Variables

@@ -150,8 +150,7 @@ branch_df <- merge(branch_df, hmda_bank_county_yr,
 
 # Handle missing values: set to 0 if bank appears in HMDA, then add 1 for log
 branch_df[, lag_bank_county_mortgage_volume := 
-          ifelse(is.na(lag_bank_county_mortgage_volume) & RSSDID %in% hmda_bank_county_yr$RSSD, 
-                 0, lag_bank_county_mortgage_volume)]
+          ifelse(is.na(lag_bank_county_mortgage_volume) , 0, lag_bank_county_mortgage_volume)]
 branch_df[, lag_bank_county_mortgage_volume := lag_bank_county_mortgage_volume + 1]
 
 # CRA bank-county-year data
@@ -183,8 +182,7 @@ branch_df <- merge(branch_df, cra_bank_county_yr,
 
 # Handle missing values: set to 0 if bank appears in CRA, then add 1 for log
 branch_df[, lag_bank_county_cra_volume := 
-          ifelse(is.na(lag_bank_county_cra_volume) & RSSDID %in% cra_bank_county_yr$RSSD, 
-                 0, lag_bank_county_cra_volume)]
+          ifelse(is.na(lag_bank_county_cra_volume) , 0, lag_bank_county_cra_volume)]
 branch_df[, lag_bank_county_cra_volume := lag_bank_county_cra_volume + 1]
 
 # ==============================================================================

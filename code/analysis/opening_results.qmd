@@ -1,0 +1,346 @@
+---
+title: "Branch Opening Results"
+format: 
+  html:
+    toc: true
+    code-fold: true
+    df-print: paged
+editor: source
+---
+
+# Setup
+
+```{r}
+#| label: setup
+#| message: false
+
+rm(list = ls())
+gc()
+
+library(data.table)
+library(dplyr)
+library(fixest)
+library(ggplot2)
+# library(kableExtra)
+library(DescTools)
+library(stringr)
+library(scales)
+
+# Load summary statistics function
+source('https://raw.githubusercontent.com/dratnadiwakara/r-utilities/refs/heads/main/summary_stat_tables.R')
+
+data_dir <- "C:/OneDrive/data/nrs_branch_closure"
+
+# Load deposit beta results from three rate cycles
+beta_cycles <- readRDS(file.path(data_dir, "deposit_beta_results.rds"))
+```
+
+# Data Preparation
+
+## Load Opening Sample with Deposit Betas
+
+Load the branch opening sample with precomputed deposit betas (created by `create_opening_analysis_sample.R`):
+
+```{r}
+#| label: load-opening-sample
+
+# Load opening analysis sample with deposit betas already calculated
+opening_sample <- readRDS(file.path(data_dir, "branch_opening_analysis_sample_with_beta.rds"))
+
+cat("Opening sample loaded successfully!\n")
+cat("Observations:", format(nrow(opening_sample), big.mark = ","), "\n")
+cat("Years:", min(opening_sample$yr), "-", max(opening_sample$yr), "\n")
+cat("Actual openings:", format(sum(opening_sample$new_branch_zip), big.mark = ","), "\n")
+cat("Opening rate:", sprintf("%.4f%%", 100 * mean(opening_sample$new_branch_zip)), "\n")
+cat("Mean deposit beta:", sprintf("%.4f", mean(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
+```
+
+
+
+# Baseline Opening Model
+
+## Define Control Variables
+
+Set up control variable specifications for opening regressions:
+
+```{r}
+#| label: define-opening-controls
+
+# State-level controls with extensive covariates
+setFixest_fml(
+  ..ctrl_state_opening = ~ log_zip_deposits + lag_county_deposit_gr + 
+                          lag_hmda_mtg_amt_gr + lag_cra_loan_amount_amt_lt_1m_gr + 
+                          lag_establishment_gr + lag_payroll_gr + lmi | 
+                          state_yr + bank_yr,
+  
+  # County-level controls (more parsimonious with county-year FE)
+  ..ctrl_county_opening = ~ log_zip_deposits | county_yr + bank_yr
+)
+
+# Create state-year fixed effect variable
+opening_sample[, state := substr(COUNTY, 1, 2)]
+opening_sample[, state_yr := paste(state, yr, sep = "_")]
+```
+
+## Baseline Regressions
+
+Opening regressions examining the relationship between deposit beta and branch openings, controlling for zip-level deposits and other factors:
+
+```{r}
+#| label: baseline-opening-regressions
+
+gc()
+
+# Run 6 regressions: all banks, large banks, small banks x state/county controls
+reg_open_all_state <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, 
+                            data = opening_sample, vcov = ~RSSDID)
+reg_open_all_county <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, 
+                             data = opening_sample, vcov = ~RSSDID)
+gc()
+
+reg_open_large_state <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, 
+                              data = opening_sample[large_bank == 1], vcov = ~RSSDID)
+reg_open_large_county <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, 
+                               data = opening_sample[large_bank == 1], vcov = ~RSSDID)
+
+# reg_open_small_state <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, 
+#                               data = opening_sample[large_bank == 0], vcov = ~RSSDID)
+# reg_open_small_county <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, 
+#                                data = opening_sample[large_bank == 0], vcov = ~RSSDID)
+
+# Display mean opening rates
+# cat("Mean Opening Rates:\n")
+# cat("All banks:", sprintf("%.6f", mean(opening_sample$new_branch_zip, na.rm = TRUE)), "\n")
+# cat("Large banks:", sprintf("%.6f", mean(opening_sample[large_bank == 1]$new_branch_zip, na.rm = TRUE)), "\n")
+# cat("Small banks:", sprintf("%.6f", mean(opening_sample[large_bank == 0]$new_branch_zip, na.rm = TRUE)), "\n")
+```
+
+## Regression Results
+
+```{r}
+#| label: tbl-baseline-opening
+#| tbl-cap: "Baseline Opening Model"
+
+# Create coefficient labels dictionary
+covariate_labels_dict <- c(
+  "deposit_beta" = "Deposit Beta",
+  "log_zip_deposits" = "log(Zip Deposits)",
+  "lag_county_deposit_gr" = "County Deposit Growth",
+  "lag_hmda_mtg_amt_gr" = "Mortgage Growth",
+  "lag_cra_loan_amount_amt_lt_1m_gr" = "CRA Loan Growth",
+  "log(lag_county_mortgage_vol)" = "log(County Mortgage Volume)",
+  "log(lag_county_cra_vol)" = "log(County CRA Volume)",
+  "lag_establishment_gr" = "Establishment Growth",
+  "lag_payroll_gr" = "Payroll Growth",
+  "lmi" = "Low-to-Moderate Income"
+)
+
+# Display text table
+etable(
+  reg_open_all_state, reg_open_all_county,
+  reg_open_large_state, reg_open_large_county,
+  # reg_open_small_state, reg_open_small_county,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  headers = list("All Banks" = 2, "Large Banks" = 2),#, "Small Banks" = 2
+  dict = covariate_labels_dict,
+  depvar = FALSE
+)
+
+# LaTeX version with AER style (uncomment to use)
+# etable(
+#   reg_open_all_state, reg_open_all_county,
+#   reg_open_large_state, reg_open_large_county,
+#   reg_open_small_state, reg_open_small_county,
+#   se.below = TRUE,
+#   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#   headers = list("All Banks" = 2, "Large Banks" = 2, "Small Banks" = 2),
+#   dict = covariate_labels_dict,
+#   depvar = FALSE,
+#   tex = TRUE,
+#   style.tex = style.tex("aer")
+# )
+```
+
+# Univariate Analysis: Deposit Beta and Opening Rates
+
+## Within-Bank Beta Deciles
+
+Examining the relationship between deposit beta deciles (within bank-year) and branch opening rates across different time periods:
+
+```{r}
+#| label: fig-univariate-beta-openings-within-bank
+#| fig-cap: "Branch Opening Rates by Deposit Beta Decile (Within Bank) Across Cycles"
+#| fig-width: 5
+#| fig-height: 3.5
+
+# Calculate opening rates by beta decile and year
+temp <- opening_sample[!is.na(beta_decile_within_bank), 
+                       .(opening_rate = mean(new_branch_zip, na.rm = TRUE)), 
+                       by = .(beta_decile_within_bank, yr)]
+temp[, beta_decile := beta_decile_within_bank]
+
+# Calculate average opening rates by cycle
+temp1 <- temp[yr %in% 2020:2023, .(opening_rate = mean(opening_rate)), by = beta_decile]
+temp1[, cycle := "Late Cycle"]
+
+temp2 <- temp[yr %in% 2015:2019, .(opening_rate = mean(opening_rate, na.rm = TRUE)), by = beta_decile]
+temp2[, cycle := "Mid Cycle"]
+
+temp3 <- temp[yr %in% 2001:2014, .(opening_rate = mean(opening_rate, na.rm = TRUE)), by = beta_decile]
+temp3[, cycle := "Early Cycle"]
+
+# Combine and winsorize
+temp_combined <- rbind(temp1, temp2, temp3)
+temp_combined[, opening_rate := Winsorize(opening_rate, 
+                                          quantile(opening_rate, probs = c(0.05, 0.95), na.rm = TRUE)), 
+              by = .(beta_decile, cycle)]
+
+# Create plot
+g <- ggplot(temp_combined, aes(x = beta_decile, y = opening_rate * 100, color = cycle)) +
+  geom_point(size = 3, alpha = 0.75, aes(shape = cycle)) +
+  scale_x_continuous(n.breaks = 10) +
+  scale_color_manual(
+    values = c("Late Cycle" = "dodgerblue4",
+               "Mid Cycle" = "tan2",
+               "Early Cycle" = "gray")
+  ) +
+  theme_minimal() +
+  labs(x = "Deposit Beta Decile (Within Bank)", 
+       y = "Percent of zip codes with new branches (%)") +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+print(g)
+
+# Uncomment to save
+# ggsave(file.path(data_dir, "../figures/univar_opening_within_bank.jpg"), g, 
+#        width = 5, height = 3.5)
+```
+
+## Within-Year Beta Deciles
+
+Examining the relationship between deposit beta deciles (within year across all banks) and branch opening rates:
+
+```{r}
+#| label: fig-univariate-beta-openings-within-year
+#| fig-cap: "Branch Opening Rates by Deposit Beta Decile (Within Year) Across Cycles"
+#| fig-width: 5
+#| fig-height: 3.5
+
+# Calculate opening rates by beta decile and year
+temp <- opening_sample[!is.na(beta_decile_within_year), 
+                       .(opening_rate = mean(new_branch_zip, na.rm = TRUE)), 
+                       by = .(beta_decile_within_year, yr)]
+temp[, beta_decile := beta_decile_within_year]
+
+# Calculate average opening rates by cycle
+temp1 <- temp[yr %in% 2020:2023, .(opening_rate = mean(opening_rate)), by = beta_decile]
+temp1[, cycle := "Late Cycle"]
+
+temp2 <- temp[yr %in% 2015:2019, .(opening_rate = mean(opening_rate, na.rm = TRUE)), by = beta_decile]
+temp2[, cycle := "Mid Cycle"]
+
+temp3 <- temp[yr %in% 2001:2014, .(opening_rate = mean(opening_rate, na.rm = TRUE)), by = beta_decile]
+temp3[, cycle := "Early Cycle"]
+
+# Combine and winsorize
+temp_combined <- rbind(temp1, temp2, temp3)
+temp_combined[, opening_rate := Winsorize(opening_rate, 
+                                          quantile(opening_rate, probs = c(0.05, 0.95), na.rm = TRUE)), 
+              by = .(beta_decile, cycle)]
+
+# Create plot
+g <- ggplot(temp_combined, aes(x = beta_decile, y = opening_rate * 100, color = cycle)) +
+  geom_point(size = 3, alpha = 0.75, aes(shape = cycle)) +
+  scale_x_continuous(n.breaks = 10) +
+  scale_color_manual(
+    values = c("Late Cycle" = "dodgerblue4",
+               "Mid Cycle" = "tan2",
+               "Early Cycle" = "gray")
+  ) +
+  theme_minimal() +
+  labs(x = "Deposit Beta Decile (Within Year)", 
+       y = "Percent of zip codes with new branches (%)") +
+  theme(legend.position = "bottom", legend.title = element_blank())
+
+print(g)
+
+# Uncomment to save
+# ggsave(file.path(data_dir, "../figures/univar_opening_within_year.jpg"), g, 
+#        width = 5, height = 3.5)
+```
+
+# Summary Statistics
+
+Basic statistics on the opening sample:
+
+```{r}
+#| label: summary-statistics
+
+# Overall statistics
+cat("Overall Opening Sample Statistics:\n")
+cat("Total potential opening locations:", format(nrow(opening_sample), big.mark = ","), "\n")
+cat("Actual openings:", format(sum(opening_sample$new_branch_zip), big.mark = ","), "\n")
+cat("Overall opening rate:", sprintf("%.4f%%", 100 * mean(opening_sample$new_branch_zip)), "\n\n")
+
+# By bank size
+cat("By Bank Size:\n")
+opening_by_size <- opening_sample[, .(
+  n_locations = .N,
+  n_openings = sum(new_branch_zip),
+  opening_rate = mean(new_branch_zip)
+), by = large_bank]
+opening_by_size[, bank_type := ifelse(large_bank == 1, "Large Banks", "Small Banks")]
+print(opening_by_size[, .(bank_type, n_locations, n_openings, 
+                          opening_rate = sprintf("%.4f%%", 100 * opening_rate))])
+
+cat("\n")
+
+# By cycle
+cat("By Rate Cycle:\n")
+opening_sample[, cycle := ifelse(yr <= 2014, "Early (2001-2014)",
+                                 ifelse(yr <= 2019, "Mid (2015-2019)", 
+                                        "Late (2020-2023)"))]
+opening_by_cycle <- opening_sample[yr >= 2001, .(
+  n_locations = .N,
+  n_openings = sum(new_branch_zip),
+  opening_rate = mean(new_branch_zip)
+), by = cycle]
+opening_by_cycle <- opening_by_cycle[order(cycle)]
+print(opening_by_cycle[, .(cycle, n_locations, n_openings, 
+                           opening_rate = sprintf("%.4f%%", 100 * opening_rate))])
+```
+
+# Data Quality Checks
+
+```{r}
+#| label: data-quality-checks
+
+cat("Data Quality Checks:\n\n")
+
+# Check deposit beta distribution
+cat("Deposit Beta Distribution:\n")
+cat("Mean:", sprintf("%.4f", mean(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
+cat("Median:", sprintf("%.4f", median(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
+cat("SD:", sprintf("%.4f", sd(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
+cat("Min:", sprintf("%.4f", min(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
+cat("Max:", sprintf("%.4f", max(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
+cat("Missing:", sum(is.na(opening_sample$deposit_beta)), "\n\n")
+
+# Check key variables
+cat("Missing Values:\n")
+key_vars <- c("deposit_beta", "df_per_dollar", "family_income", "college_frac", 
+              "lag_county_mortgage_volume", "lag_county_cra_volume", 
+              "population_density", "bank_assets", "beta_decile_within_bank", 
+              "beta_decile_within_year")
+for (var in key_vars) {
+  if (var %in% names(opening_sample)) {
+    n_missing <- sum(is.na(opening_sample[[var]]))
+    pct_missing <- 100 * n_missing / nrow(opening_sample)
+    cat(sprintf("  %s: %s (%.2f%%)\n", var, 
+                format(n_missing, big.mark = ","), pct_missing))
+  } else {
+    cat(sprintf("  %s: NOT FOUND IN DATA\n", var))
+  }
+}
+```
