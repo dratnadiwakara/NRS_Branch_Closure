@@ -1,11 +1,16 @@
 ---
 title: "Branch Closure Results"
-format: 
-  html:
-    toc: true
-    code-fold: true
-    df-print: paged
+format:
+ html:
+   page-layout: full
+   code-overflow: scroll
+   code-fold: true
+   number-sections: true
+   self-contained: true
 editor: source
+execute: 
+ warning: false
+ echo: true
 ---
 
 # Setup
@@ -108,12 +113,19 @@ branch_sample[, deposit_beta := ifelse(yr <= 2014, pred_int_exp_chg_cycle_0406 /
                                              pred_int_exp_chg_cycle_2224 / 4))]
 
 # Calculate deposit franchise value per dollar
-branch_sample[, df_per_dollar := (1 - deposit_beta) * (1 - (1 / (1.025)^10))]
+
 
 # Create rate cycle variable
 branch_sample[, rate_cycle := ifelse(yr >= 2004 & yr <= 2006, "1early",
                                     ifelse(yr >= 2016 & yr <= 2019, "2mid",
                                     ifelse(yr >= 2022 & yr <= 2023, "3late", NA)))]
+
+
+# Create fixed effect variables
+branch_sample[, state_yr := paste0(substr(STCNTYBR, 1, 2), "_", yr)]
+branch_sample[, county_yr := paste0(STCNTYBR, "_", yr)]
+branch_sample[, bank_yr := paste0(RSSDID, "_", yr)]
+
 
 cat("Branch sample prepared with", nrow(branch_sample), "observations\n")
 cat("Observations by rate cycle:\n")
@@ -200,7 +212,7 @@ covariate_labels_dict <- c(
 )
 
 # Create table using etable
-etable(
+md_table(etable(
   beta_cycles$cycle_0406$reg, beta_cycles$cycle_1619$reg, beta_cycles$cycle_2224$reg,
   beta_cycles$cycle_0406$reg_sophisticated, beta_cycles$cycle_1619$reg_sophisticated, beta_cycles$cycle_2224$reg_sophisticated,
   se.below = TRUE,
@@ -209,7 +221,7 @@ etable(
                  "Early Cycle" = 1, "Mid Cycle" = 1, "Late Cycle" = 1),
   dict = covariate_labels_dict,
   depvar = FALSE
-)
+))
 
 # LaTeX version with AER style (uncomment to use)
 # etable(
@@ -791,11 +803,6 @@ setFixest_fml(
                             legacy_branch + log(lag_bank_county_mortgage_volume) + log(lag_bank_county_cra_volume)| county_yr + bank_yr
 )
 
-# Create fixed effect variables
-branch_sample[, state_yr := paste0(substr(STCNTYBR, 1, 2), "_", yr)]
-branch_sample[, county_yr := paste0(STCNTYBR, "_", yr)]
-branch_sample[, bank_yr := paste0(RSSDID, "_", yr)]
-
 ```
 
 ## Baseline Closure Model
@@ -828,14 +835,14 @@ closure_regs <- list(
 )
 
 # Display results
-etable(
+md_table(etable(
   closure_regs,
   se.below = TRUE,
   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
   headers = list("All Banks" = 2, "Large Banks" = 2, "Small Banks" = 2),
   dict = c("deposit_beta" = "Deposit beta"),
   depvar = FALSE
-)
+))
 
 # LaTeX version (uncomment to use)
 # etable(
@@ -936,14 +943,14 @@ for(i in 1:length(yr_range)) {
 cat("\n")
 
 # Display results
-etable(
+md_table(etable(
   closure_small_by_regime,
   se.below = TRUE,
   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
   headers = list("2001-07" = 2, "2008-11" = 2, "2012-19" = 2, "2020-23" = 2),
   dict = c("deposit_beta" = "Deposit beta"),
   depvar = FALSE
-)
+))
 
 # LaTeX versions (uncomment to use)
 # etable(
@@ -1087,7 +1094,7 @@ closure_usage_by_size <- list(
 )
 
 cat("Results by bank size:\n")
-etable(
+md_table(etable(
   closure_usage_by_size,
   se.below = TRUE,
   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
@@ -1095,7 +1102,7 @@ etable(
   dict = c("deposit_beta" = "Deposit beta", "change_visits" = "Drop in visits", 
            "log(distance_km)" = "Log(Distance)"),
   depvar = FALSE
-)
+))
 
 # LaTeX versions (uncomment to use)
 # etable(
@@ -1191,14 +1198,14 @@ closure_rf_by_size <- list(
 )
 
 cat("Results by bank size:\n")
-etable(
+md_table(etable(
   closure_rf_by_size,
   se.below = TRUE,
   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
   headers = list("Large Banks" = 4, "Small Banks" = 4),
   dict = rf_dict,
   depvar = FALSE
-)
+))
 
 # LaTeX versions (uncomment to use)
 # etable(
