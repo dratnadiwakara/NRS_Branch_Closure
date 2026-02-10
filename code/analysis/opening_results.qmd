@@ -1,11 +1,16 @@
 ---
 title: "Branch Opening Results"
-format: 
-  html:
-    toc: true
-    code-fold: true
-    df-print: paged
+format:
+ html:
+   page-layout: full
+   code-overflow: scroll
+   code-fold: true
+   number-sections: true
+   self-contained: true
 editor: source
+execute: 
+ warning: false
+ echo: true
 ---
 
 # Setup
@@ -13,9 +18,10 @@ editor: source
 ```{r}
 #| label: setup
 #| message: false
+#| warning: false
 
 rm(list = ls())
-gc()
+gc(verbose = FALSE)
 
 library(data.table)
 library(dplyr)
@@ -33,19 +39,56 @@ data_dir <- "C:/OneDrive/data/nrs_branch_closure"
 
 # Load deposit beta results from three rate cycles
 beta_cycles <- readRDS(file.path(data_dir, "deposit_beta_results.rds"))
+gc(verbose = FALSE)
 ```
 
 # Data Preparation
 
 ## Load Opening Sample with Deposit Betas
 
-Load the branch opening sample with precomputed deposit betas (created by `create_opening_analysis_sample.R`):
+Load the branch opening sample with precomputed deposit betas (created by `create_opening_analysis_sample_v2.0.R`):
 
 ```{r}
 #| label: load-opening-sample
+#| message: false
+#| warning: false
 
 # Load opening analysis sample with deposit betas already calculated
-opening_sample <- readRDS(file.path(data_dir, "branch_opening_analysis_sample_with_beta.rds"))
+opening_sample <- readRDS(file.path(data_dir, "branch_opening_analysis_sample_with_deposit_beta_v2.rds"))
+setDT(opening_sample)
+
+# Define large_bank (CPI-adjusted $100B asset cutoff) using same logic as sample-construction script
+cpi <- readRDS(file.path(data_dir, "cpi.rds"))
+cpi[, adj_ratio := CPI / CPI[year == 2024]]
+cpi[, asset_cutoff := adj_ratio * 100000000]
+all_banks <- rbindlist(lapply(names(beta_cycles), function(cycle_name) {
+  dt <- copy(beta_cycles[[cycle_name]]$data)
+  dt[, cycle := cycle_name]
+  dt[, year := ifelse(cycle == "cycle_0406", 2006,
+                    ifelse(cycle == "cycle_1619", 2019, 2023))]
+  dt
+}))
+all_banks <- merge(all_banks, cpi[, .(year, asset_cutoff)], by = "year", all.x = TRUE)
+large_banks <- unique(all_banks[bank_assets > asset_cutoff]$ID_RSSD)
+rm(all_banks)
+gc(verbose = FALSE)
+opening_sample[, large_bank := fifelse(RSSDID %in% large_banks, 1L, 0L)]
+rm(cpi)
+gc(verbose = FALSE)
+
+# Create state-year fixed effect variable
+opening_sample[, state := substr(COUNTY, 1, 2)]
+opening_sample[, state_yr := paste(state, yr, sep = "_")]
+
+opening_sample <- opening_sample[!is.na(deposit_beta)]
+
+# Randomly keep 75% of small banks (all large banks kept) to reduce memory
+set.seed(20250127)
+small_bank_ids <- unique(opening_sample[large_bank == 0L]$RSSDID)
+small_bank_ids_keep <- sample(small_bank_ids, size = ceiling(0.75 * length(small_bank_ids)))
+opening_sample <- opening_sample[large_bank == 1L | RSSDID %in% small_bank_ids_keep]
+rm(small_bank_ids, small_bank_ids_keep)
+gc(verbose = FALSE)
 
 cat("Opening sample loaded successfully!\n")
 cat("Observations:", format(nrow(opening_sample), big.mark = ","), "\n")
@@ -55,7 +98,206 @@ cat("Opening rate:", sprintf("%.4f%%", 100 * mean(opening_sample$new_branch_zip)
 cat("Mean deposit beta:", sprintf("%.4f", mean(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
 ```
 
+# Descriptive Statistics for Branch Opening Sample
 
+Summary statistics for the opening analysis sample, by bank size and period (Mid Cycle 2019, Early Cycle 2012). SD (within) is computed from residuals of regressions on county-year and bank-year fixed effects for Deposit Beta and log(Zip Deposits) only.
+
+## Panel A: Large Banks
+
+```{r}
+#| label: tbl-desc-stats-opening-large
+#| tbl-cap: "Descriptive Statistics - Branch Opening Sample, Large Banks"
+#| results: asis
+#| message: false
+#| warning: false
+
+# Restrict to 2012 and 2019, prepare for summary
+temp <- copy(opening_sample[yr %in% c(2012, 2019) & is.finite(deposit_beta) & is.finite(log_zip_deposits)])
+temp[, new_branch_zip := new_branch_zip * 100]
+
+new_names <- c("New Entry", "Deposit Beta", "log(Zip Deposits)", "Deposit 3yr growth", "Mortgage 3yr growth", "CRA 3yr growth", "Establishments 3yr growth", "Payroll 3yr growth", "Low to Moderate Income Area")
+setnames(temp,
+         c("new_branch_zip", "deposit_beta", "log_zip_deposits", "lag_county_deposit_gr", "lag_hmda_mtg_amt_gr", "lag_cra_loan_amount_amt_lt_1m_gr", "lag_establishment_gr", "lag_payroll_gr", "lmi"),
+         new_names)
+
+# Within-FE SD for large banks, mid cycle (2019)
+temp_df_mid <- copy(opening_sample[is.finite(deposit_beta) & is.finite(log_zip_deposits) & yr == 2019 & large_bank == 1])
+reg_beta <- feols(deposit_beta ~ 0 | county_yr + bank_yr, temp_df_mid)
+gc(verbose = FALSE)
+temp_df_mid[, pred_deposit_beta := predict(reg_beta, newdata = temp_df_mid)]
+temp_df_mid[, resid_deposit_beta := deposit_beta - pred_deposit_beta]
+sd_within_beta_mid <- sd(temp_df_mid$resid_deposit_beta, na.rm = TRUE)
+
+reg_log <- feols(log_zip_deposits ~ 0 | county_yr + bank_yr, temp_df_mid)
+gc(verbose = FALSE)
+temp_df_mid[, pred_log_zip_deposits := predict(reg_log, newdata = temp_df_mid)]
+temp_df_mid[, resid_log_zip_deposits := log_zip_deposits - pred_log_zip_deposits]
+sd_within_log_mid <- sd(temp_df_mid$resid_log_zip_deposits, na.rm = TRUE)
+
+# Within-FE SD for large banks, early cycle (2012)
+temp_df_early <- copy(opening_sample[is.finite(deposit_beta) & is.finite(log_zip_deposits) & yr == 2012 & large_bank == 1])
+reg_beta <- feols(deposit_beta ~ 0 | county_yr + bank_yr, temp_df_early)
+gc(verbose = FALSE)
+temp_df_early[, pred_deposit_beta := predict(reg_beta, newdata = temp_df_early)]
+temp_df_early[, resid_deposit_beta := deposit_beta - pred_deposit_beta]
+sd_within_beta_early <- sd(temp_df_early$resid_deposit_beta, na.rm = TRUE)
+
+reg_log <- feols(log_zip_deposits ~ 0 | county_yr + bank_yr, temp_df_early)
+gc(verbose = FALSE)
+temp_df_early[, pred_log_zip_deposits := predict(reg_log, newdata = temp_df_early)]
+temp_df_early[, resid_log_zip_deposits := log_zip_deposits - pred_log_zip_deposits]
+sd_within_log_early <- sd(temp_df_early$resid_log_zip_deposits, na.rm = TRUE)
+rm(temp_df_mid, temp_df_early)
+gc(verbose = FALSE)
+
+# Summary stats
+temp1 <- summary_stats_function(temp[large_bank == 1 & yr == 2019], new_names)
+temp1 <- temp1 %>% select(-P25, -P50, -P75, -Obs) %>% data.table()
+temp1[, `SD (within)` := NA_real_]
+temp1[Variable == "Deposit Beta", `SD (within)` := sd_within_beta_mid]
+temp1[Variable == "log(Zip Deposits)", `SD (within)` := sd_within_log_mid]
+temp1 <- temp1[, .(Variable, Mean, SD, `SD (within)`, P10, P90)]
+
+temp2 <- summary_stats_function(temp[large_bank == 1 & yr == 2012], new_names)
+temp2 <- temp2 %>% select(-P25, -P50, -P75, -Obs) %>% data.table()
+temp2[, `SD (within)` := NA_real_]
+temp2[Variable == "Deposit Beta", `SD (within)` := sd_within_beta_early]
+temp2[Variable == "log(Zip Deposits)", `SD (within)` := sd_within_log_early]
+temp2 <- temp2[, .(Variable, Mean, SD, `SD (within)`, P10, P90)]
+
+result_large <- merge(temp1, temp2, by = "Variable", suffixes = c(".mid", ".early"))
+
+variable_order <- c("New Entry", "Deposit Beta", "log(Zip Deposits)", "CRA 3yr growth", "Deposit 3yr growth", "Establishments 3yr growth", "Low to Moderate Income Area", "Mortgage 3yr growth", "Payroll 3yr growth")
+result_large <- result_large[order(factor(Variable, levels = variable_order))]
+
+obs_mid <- nrow(temp[large_bank == 1 & yr == 2019])
+obs_early <- nrow(temp[large_bank == 1 & yr == 2012])
+
+cat("\\begin{table}[htbp]\n")
+cat("\\centering\n")
+cat("\\caption{Descriptive Statistics - Branch Opening Sample, Panel A: Large Banks}\n")
+cat("\\begin{tabular}{l*{10}{c}}\n")
+cat("\\hline\\hline\n")
+cat("& \\multicolumn{5}{c}{Mid Cycle; Year 2019; Obs =", obs_mid, "} & \\multicolumn{5}{c}{Early Cycle; Year 2012; Obs =", obs_early, "} \\\\\n")
+cat("Variable & Mean & SD & SD (within) & P10 & P90 & Mean & SD & SD (within) & P10 & P90 \\\\\n")
+cat("\\hline\n")
+
+for (i in 1:nrow(result_large)) {
+  row <- result_large[i]
+  cat(row$Variable, "&",
+      sprintf("%.2f", row$Mean.mid), "&",
+      sprintf("%.2f", row$SD.mid), "&",
+      ifelse(is.na(row$`SD (within).mid`), "", sprintf("%.3f", row$`SD (within).mid`)), "&",
+      sprintf("%.2f", row$P10.mid), "&",
+      sprintf("%.2f", row$P90.mid), "&",
+      sprintf("%.2f", row$Mean.early), "&",
+      sprintf("%.2f", row$SD.early), "&",
+      ifelse(is.na(row$`SD (within).early`), "", sprintf("%.3f", row$`SD (within).early`)), "&",
+      sprintf("%.2f", row$P10.early), "&",
+      sprintf("%.2f", row$P90.early), "\\\\\n")
+}
+
+cat("\\hline\\hline\n")
+cat("\\end{tabular}\n")
+cat("\\end{table}\n")
+
+md_table(result_large)
+rm(temp1, temp2, result_large, obs_mid, obs_early, reg_beta, reg_log)
+gc(verbose = FALSE)
+```
+
+## Panel B: Small Banks
+
+```{r}
+#| label: tbl-desc-stats-opening-small
+#| tbl-cap: "Descriptive Statistics - Branch Opening Sample, Small Banks"
+#| results: asis
+#| message: false
+#| warning: false
+
+# Within-FE SD for small banks, mid cycle (2019)
+temp_df_mid <- copy(opening_sample[is.finite(deposit_beta) & is.finite(log_zip_deposits) & yr == 2019 & large_bank == 0])
+reg_beta <- feols(deposit_beta ~ 0 | county_yr + bank_yr, temp_df_mid)
+gc(verbose = FALSE)
+temp_df_mid[, pred_deposit_beta := predict(reg_beta, newdata = temp_df_mid)]
+temp_df_mid[, resid_deposit_beta := deposit_beta - pred_deposit_beta]
+sd_within_beta_mid <- sd(temp_df_mid$resid_deposit_beta, na.rm = TRUE)
+
+reg_log <- feols(log_zip_deposits ~ 0 | county_yr + bank_yr, temp_df_mid)
+gc(verbose = FALSE)
+temp_df_mid[, pred_log_zip_deposits := predict(reg_log, newdata = temp_df_mid)]
+temp_df_mid[, resid_log_zip_deposits := log_zip_deposits - pred_log_zip_deposits]
+sd_within_log_mid <- sd(temp_df_mid$resid_log_zip_deposits, na.rm = TRUE)
+
+# Within-FE SD for small banks, early cycle (2012)
+temp_df_early <- copy(opening_sample[is.finite(deposit_beta) & is.finite(log_zip_deposits) & yr == 2012 & large_bank == 0])
+reg_beta <- feols(deposit_beta ~ 0 | county_yr + bank_yr, temp_df_early)
+gc(verbose = FALSE)
+temp_df_early[, pred_deposit_beta := predict(reg_beta, newdata = temp_df_early)]
+temp_df_early[, resid_deposit_beta := deposit_beta - pred_deposit_beta]
+sd_within_beta_early <- sd(temp_df_early$resid_deposit_beta, na.rm = TRUE)
+
+reg_log <- feols(log_zip_deposits ~ 0 | county_yr + bank_yr, temp_df_early)
+gc(verbose = FALSE)
+temp_df_early[, pred_log_zip_deposits := predict(reg_log, newdata = temp_df_early)]
+temp_df_early[, resid_log_zip_deposits := log_zip_deposits - pred_log_zip_deposits]
+sd_within_log_early <- sd(temp_df_early$resid_log_zip_deposits, na.rm = TRUE)
+rm(temp_df_mid, temp_df_early)
+gc(verbose = FALSE)
+
+# Summary stats (temp and new_names from Panel A chunk)
+temp1 <- summary_stats_function(temp[large_bank == 0 & yr == 2019], new_names)
+temp1 <- temp1 %>% select(-P25, -P50, -P75, -Obs) %>% data.table()
+temp1[, `SD (within)` := NA_real_]
+temp1[Variable == "Deposit Beta", `SD (within)` := sd_within_beta_mid]
+temp1[Variable == "log(Zip Deposits)", `SD (within)` := sd_within_log_mid]
+temp1 <- temp1[, .(Variable, Mean, SD, `SD (within)`, P10, P90)]
+
+temp2 <- summary_stats_function(temp[large_bank == 0 & yr == 2012], new_names)
+temp2 <- temp2 %>% select(-P25, -P50, -P75, -Obs) %>% data.table()
+temp2[, `SD (within)` := NA_real_]
+temp2[Variable == "Deposit Beta", `SD (within)` := sd_within_beta_early]
+temp2[Variable == "log(Zip Deposits)", `SD (within)` := sd_within_log_early]
+temp2 <- temp2[, .(Variable, Mean, SD, `SD (within)`, P10, P90)]
+
+result_small <- merge(temp1, temp2, by = "Variable", suffixes = c(".mid", ".early"))
+result_small <- result_small[order(factor(Variable, levels = variable_order))]
+
+obs_mid <- nrow(temp[large_bank == 0 & yr == 2019])
+obs_early <- nrow(temp[large_bank == 0 & yr == 2012])
+
+cat("\\begin{table}[htbp]\n")
+cat("\\centering\n")
+cat("\\caption{Descriptive Statistics - Branch Opening Sample, Panel B: Small Banks}\n")
+cat("\\begin{tabular}{l*{10}{c}}\n")
+cat("\\hline\\hline\n")
+cat("& \\multicolumn{5}{c}{Mid Cycle; Year 2019; Obs =", obs_mid, "} & \\multicolumn{5}{c}{Early Cycle; Year 2012; Obs =", obs_early, "} \\\\\n")
+cat("Variable & Mean & SD & SD (within) & P10 & P90 & Mean & SD & SD (within) & P10 & P90 \\\\\n")
+cat("\\hline\n")
+
+for (i in 1:nrow(result_small)) {
+  row <- result_small[i]
+  cat(row$Variable, "&",
+      sprintf("%.2f", row$Mean.mid), "&",
+      sprintf("%.2f", row$SD.mid), "&",
+      ifelse(is.na(row$`SD (within).mid`), "", sprintf("%.3f", row$`SD (within).mid`)), "&",
+      sprintf("%.2f", row$P10.mid), "&",
+      sprintf("%.2f", row$P90.mid), "&",
+      sprintf("%.2f", row$Mean.early), "&",
+      sprintf("%.2f", row$SD.early), "&",
+      ifelse(is.na(row$`SD (within).early`), "", sprintf("%.3f", row$`SD (within).early`)), "&",
+      sprintf("%.2f", row$P10.early), "&",
+      sprintf("%.2f", row$P90.early), "\\\\\n")
+}
+
+cat("\\hline\\hline\n")
+cat("\\end{tabular}\n")
+cat("\\end{table}\n")
+
+md_table(result_small)
+rm(temp, temp1, temp2, result_small, new_names, variable_order, obs_mid, obs_early, reg_beta, reg_log)
+gc(verbose = FALSE)
+```
 
 # Baseline Opening Model
 
@@ -65,61 +307,20 @@ Set up control variable specifications for opening regressions:
 
 ```{r}
 #| label: define-opening-controls
+#| message: false
+#| warning: false
 
 # State-level controls with extensive covariates
 setFixest_fml(
   ..ctrl_state_opening = ~ log_zip_deposits + lag_county_deposit_gr + 
                           lag_hmda_mtg_amt_gr + lag_cra_loan_amount_amt_lt_1m_gr + 
-                          lag_establishment_gr + lag_payroll_gr + lmi | 
+                          lag_establishment_gr + lag_payroll_gr + lmi +
+                          log1p(lag_county_cra_volume)+log1p(lag_county_mortgage_volume)| 
                           state_yr + bank_yr,
   
   # County-level controls (more parsimonious with county-year FE)
   ..ctrl_county_opening = ~ log_zip_deposits | county_yr + bank_yr
 )
-
-# Create state-year fixed effect variable
-opening_sample[, state := substr(COUNTY, 1, 2)]
-opening_sample[, state_yr := paste(state, yr, sep = "_")]
-```
-
-## Baseline Regressions
-
-Opening regressions examining the relationship between deposit beta and branch openings, controlling for zip-level deposits and other factors:
-
-```{r}
-#| label: baseline-opening-regressions
-
-gc()
-
-# Run 6 regressions: all banks, large banks, small banks x state/county controls
-reg_open_all_state <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, 
-                            data = opening_sample, vcov = ~RSSDID)
-reg_open_all_county <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, 
-                             data = opening_sample, vcov = ~RSSDID)
-gc()
-
-reg_open_large_state <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, 
-                              data = opening_sample[large_bank == 1], vcov = ~RSSDID)
-reg_open_large_county <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, 
-                               data = opening_sample[large_bank == 1], vcov = ~RSSDID)
-
-# reg_open_small_state <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, 
-#                               data = opening_sample[large_bank == 0], vcov = ~RSSDID)
-# reg_open_small_county <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, 
-#                                data = opening_sample[large_bank == 0], vcov = ~RSSDID)
-
-# Display mean opening rates
-# cat("Mean Opening Rates:\n")
-# cat("All banks:", sprintf("%.6f", mean(opening_sample$new_branch_zip, na.rm = TRUE)), "\n")
-# cat("Large banks:", sprintf("%.6f", mean(opening_sample[large_bank == 1]$new_branch_zip, na.rm = TRUE)), "\n")
-# cat("Small banks:", sprintf("%.6f", mean(opening_sample[large_bank == 0]$new_branch_zip, na.rm = TRUE)), "\n")
-```
-
-## Regression Results
-
-```{r}
-#| label: tbl-baseline-opening
-#| tbl-cap: "Baseline Opening Model"
 
 # Create coefficient labels dictionary
 covariate_labels_dict <- c(
@@ -132,26 +333,162 @@ covariate_labels_dict <- c(
   "log(lag_county_cra_vol)" = "log(County CRA Volume)",
   "lag_establishment_gr" = "Establishment Growth",
   "lag_payroll_gr" = "Payroll Growth",
-  "lmi" = "Low-to-Moderate Income"
+  "lmi" = "Low-to-Moderate Income",
+  "log1p(lag_county_cra_volume)" = "log(Lag County CRA Volume)",
+  "log1p(lag_county_mortgage_volume)" = "log(Lag County Mortgage Volume)",
+  # Reduced form
+  "college_frac" = "College frac",
+  "log(family_income)" = "Income",
+  "dividend_frac" = "Stock market frac",
+  "factor_age_bin2" = "Age Q1-Q2",
+  "factor_age_bin3" = "Age Q2-Q3",
+  "factor_age_bin4" = "Age >Q3",
+  "lag_county_deposit_hhi" = "County deposit HHI",
+  "population_density" = "Population density",
+  "sophisticated" = "Sophisticated zipcode",
+  # Usage (for pandemic-era regressions)
+  "change_visits" = "Drop in visits",
+  "log(distance_km)" = "Log(Distance km)"
 )
+omit_controls <- as.vector(covariate_labels_dict)
+omit_controls <- sub("^log\\(", "", omit_controls)
+omit_controls <- sub("\\)$", "", omit_controls)
+
+
+# Year ranges by economic regime (same as closure analysis)
+yr_range <- list(2001:2007, 2008:2011, 2012:2019, 2020:2025)
+```
+
+# Univariate: Openings by Deposit Beta Decile
+
+Average opening rate (share of zip codes with a new branch) by deposit beta decile and rate cycle. Deciles are computed within bank-year (within bank) or within year (not within bank).
+
+## Within bank (decile within bank-year)
+
+```{r}
+#| label: fig-openings-univar-within-bank
+#| fig-cap: "Pct of zip codes with new branches by deposit beta decile (within bank), by cycle"
+#| message: false
+#| warning: false
+
+# Deciles: within bank-year and within year
+opening_sample[, beta_decile_within_bank := dplyr::ntile(deposit_beta, 10), by = .(RSSDID, yr)]
+opening_sample[, beta_decile_within_year := dplyr::ntile(deposit_beta, 10), by = yr]
+
+temp <- opening_sample[!is.na(beta_decile_within_bank), .(openings = mean(new_branch_zip, na.rm = TRUE)), by = .(beta_decile_within_bank, yr)]
+temp[, beta_bin := beta_decile_within_bank]
+
+temp1 <- temp[yr %in% 2020:2023, .(openings = mean(openings)), by = beta_bin]
+temp1[, cycle := "Late Cycle"]
+
+temp2 <- temp[yr %in% 2015:2019, .(openings = mean(openings, na.rm = TRUE)), by = beta_bin]
+temp2[, cycle := "Mid Cycle"]
+
+temp3 <- temp[yr %in% 2001:2014, .(openings = mean(openings, na.rm = TRUE)), by = beta_bin]
+temp3[, cycle := "Early Cycle"]
+
+temp_combined <- rbind(temp1, temp2, temp3)
+temp_combined[, openings := DescTools::Winsorize(openings, quantile(openings, probs = c(0.05, 0.95), na.rm = TRUE)), by = .(beta_bin, cycle)]
+
+ggplot(temp_combined, aes(x = beta_bin, y = openings * 100, color = cycle)) +
+  geom_point(size = 3, alpha = 0.75, aes(shape = cycle)) +
+  scale_x_continuous(n.breaks = 10) +
+  scale_color_manual(values = c("Late Cycle" = "dodgerblue4", "Mid Cycle" = "tan2", "Early Cycle" = "gray")) +
+  theme_minimal() +
+  labs(x = "Deposit Beta decile", y = "Pct of zip codes with new branches (%)") +
+  theme(legend.position = "bottom", legend.title = element_blank())
+rm(temp, temp1, temp2, temp3, temp_combined)
+gc(verbose = FALSE)
+```
+
+## Not within bank (decile within year)
+
+```{r}
+#| label: fig-openings-univar-within-year
+#| fig-cap: "Pct of zip codes with new branches by deposit beta decile (within year), by cycle"
+#| message: false
+#| warning: false
+
+temp <- opening_sample[!is.na(beta_decile_within_year), .(openings = mean(new_branch_zip, na.rm = TRUE)), by = .(beta_decile_within_year, yr)]
+temp[, beta_bin := beta_decile_within_year]
+
+temp1 <- temp[yr %in% 2020:2023, .(openings = mean(openings)), by = beta_bin]
+temp1[, cycle := "Late Cycle"]
+
+temp2 <- temp[yr %in% 2015:2019, .(openings = mean(openings, na.rm = TRUE)), by = beta_bin]
+temp2[, cycle := "Mid Cycle"]
+
+temp3 <- temp[yr %in% 2001:2014, .(openings = mean(openings, na.rm = TRUE)), by = beta_bin]
+temp3[, cycle := "Early Cycle"]
+
+temp_combined <- rbind(temp1, temp2, temp3)
+temp_combined[, openings := DescTools::Winsorize(openings, quantile(openings, probs = c(0.01, 0.99), na.rm = TRUE)), by = .(beta_bin, cycle)]
+
+ggplot(temp_combined, aes(x = beta_bin, y = openings * 100, color = cycle)) +
+  geom_point(size = 3, alpha = 0.75, aes(shape = cycle)) +
+  scale_x_continuous(n.breaks = 10) +
+  scale_color_manual(values = c("Late Cycle" = "dodgerblue4", "Mid Cycle" = "tan2", "Early Cycle" = "gray")) +
+  theme_minimal() +
+  labs(x = "Deposit Beta decile", y = "Pct of zip codes with new branches (%)") +
+  theme(legend.position = "bottom", legend.title = element_blank())
+rm(temp, temp1, temp2, temp3, temp_combined)
+gc(verbose = FALSE)
+# Drop decile columns from opening_sample; no longer needed for regressions
+opening_sample[, c("beta_decile_within_bank", "beta_decile_within_year") := NULL]
+gc(verbose = FALSE)
+```
+
+## Baseline Regressions
+
+Opening regressions examining the relationship between deposit beta and branch openings, controlling for zip-level deposits and other factors:
+
+```{r}
+#| label: baseline-opening-regressions
+#| message: false
+#| warning: false
+
+gc(verbose = FALSE)
+
+# Run 6 regressions: all banks, large banks, small banks x state/county controls (one at a time to free memory)
+reg_open_baseline <- list()
+reg_open_baseline[[1]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = opening_sample, vcov = ~RSSDID)
+gc(verbose = FALSE)
+reg_open_baseline[[2]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = opening_sample, vcov = ~RSSDID)
+gc(verbose = FALSE)
+large_df <- opening_sample[large_bank == 1]
+reg_open_baseline[[3]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = large_df, vcov = ~RSSDID)
+gc(verbose = FALSE)
+reg_open_baseline[[4]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = large_df, vcov = ~RSSDID)
+rm(large_df)
+small_df <- opening_sample[large_bank == 0]
+gc(verbose = FALSE)
+
+reg_open_baseline[[5]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = small_df, vcov = ~RSSDID)
+gc(verbose = FALSE)
+reg_open_baseline[[6]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = small_df, vcov = ~RSSDID)
+rm(small_df)
+gc(verbose = FALSE)
+```
+
+```{r}
+#| label: tbl-baseline-opening
+#| tbl-cap: "Baseline Opening Model"
+#| message: false
+#| warning: false
 
 # Display text table
-etable(
-  reg_open_all_state, reg_open_all_county,
-  reg_open_large_state, reg_open_large_county,
-  # reg_open_small_state, reg_open_small_county,
+md_table(etable(reg_open_baseline,
   se.below = TRUE,
   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
-  headers = list("All Banks" = 2, "Large Banks" = 2),#, "Small Banks" = 2
+  headers = list("All Banks" = 2, "Large Banks" = 2, "Small Banks" = 2),
   dict = covariate_labels_dict,
   depvar = FALSE
-)
+))
+rm(reg_open_baseline)
+gc(verbose = FALSE)
 
 # LaTeX version with AER style (uncomment to use)
-# etable(
-#   reg_open_all_state, reg_open_all_county,
-#   reg_open_large_state, reg_open_large_county,
-#   reg_open_small_state, reg_open_small_county,
+# etable(reg_open_baseline,
 #   se.below = TRUE,
 #   signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
 #   headers = list("All Banks" = 2, "Large Banks" = 2, "Small Banks" = 2),
@@ -162,185 +499,396 @@ etable(
 # )
 ```
 
-# Univariate Analysis: Deposit Beta and Opening Rates
+# Openings by Regime
 
-## Within-Bank Beta Deciles
-
-Examining the relationship between deposit beta deciles (within bank-year) and branch opening rates across different time periods:
+Opening regressions by economic regime (2000-2007, 2008-2011, 2012-2019, 2020-2025), separately for large and small banks.
 
 ```{r}
-#| label: fig-univariate-beta-openings-within-bank
-#| fig-cap: "Branch Opening Rates by Deposit Beta Decile (Within Bank) Across Cycles"
-#| fig-width: 5
-#| fig-height: 3.5
+#| label: opening-large-by-cycle
+#| message: false
+#| warning: false
 
-# Calculate opening rates by beta decile and year
-temp <- opening_sample[!is.na(beta_decile_within_bank), 
-                       .(opening_rate = mean(new_branch_zip, na.rm = TRUE)), 
-                       by = .(beta_decile_within_bank, yr)]
-temp[, beta_decile := beta_decile_within_bank]
+# Persistent subsets so fixest can find data when computing vcov
+large_r1 <- opening_sample[large_bank == 1 & yr %in% yr_range[[1]]]
+large_r2 <- opening_sample[large_bank == 1 & yr %in% yr_range[[2]]]
+large_r3 <- opening_sample[large_bank == 1 & yr %in% yr_range[[3]]]
+large_r4 <- opening_sample[large_bank == 1 & yr %in% yr_range[[4]]]
 
-# Calculate average opening rates by cycle
-temp1 <- temp[yr %in% 2020:2023, .(opening_rate = mean(opening_rate)), by = beta_decile]
-temp1[, cycle := "Late Cycle"]
-
-temp2 <- temp[yr %in% 2015:2019, .(opening_rate = mean(opening_rate, na.rm = TRUE)), by = beta_decile]
-temp2[, cycle := "Mid Cycle"]
-
-temp3 <- temp[yr %in% 2001:2014, .(opening_rate = mean(opening_rate, na.rm = TRUE)), by = beta_decile]
-temp3[, cycle := "Early Cycle"]
-
-# Combine and winsorize
-temp_combined <- rbind(temp1, temp2, temp3)
-temp_combined[, opening_rate := Winsorize(opening_rate, 
-                                          quantile(opening_rate, probs = c(0.05, 0.95), na.rm = TRUE)), 
-              by = .(beta_decile, cycle)]
-
-# Create plot
-g <- ggplot(temp_combined, aes(x = beta_decile, y = opening_rate * 100, color = cycle)) +
-  geom_point(size = 3, alpha = 0.75, aes(shape = cycle)) +
-  scale_x_continuous(n.breaks = 10) +
-  scale_color_manual(
-    values = c("Late Cycle" = "dodgerblue4",
-               "Mid Cycle" = "tan2",
-               "Early Cycle" = "gray")
-  ) +
-  theme_minimal() +
-  labs(x = "Deposit Beta Decile (Within Bank)", 
-       y = "Percent of zip codes with new branches (%)") +
-  theme(legend.position = "bottom", legend.title = element_blank())
-
-print(g)
-
-# Uncomment to save
-# ggsave(file.path(data_dir, "../figures/univar_opening_within_bank.jpg"), g, 
-#        width = 5, height = 3.5)
+opening_large_by_cycle <- list()
+opening_large_by_cycle[[1]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = large_r1, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_large_by_cycle[[2]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = large_r1, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_large_by_cycle[[3]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = large_r2, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_large_by_cycle[[4]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = large_r2, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_large_by_cycle[[5]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = large_r3, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_large_by_cycle[[6]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = large_r3, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_large_by_cycle[[7]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = large_r4, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_large_by_cycle[[8]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = large_r4, vcov = ~RSSDID)
+gc(verbose = FALSE)
+rm(large_r1, large_r2, large_r3, large_r4)
+gc(verbose = FALSE)
 ```
 
-## Within-Year Beta Deciles
-
-Examining the relationship between deposit beta deciles (within year across all banks) and branch opening rates:
+Mean opening rates by regime (large banks, then small banks):
 
 ```{r}
-#| label: fig-univariate-beta-openings-within-year
-#| fig-cap: "Branch Opening Rates by Deposit Beta Decile (Within Year) Across Cycles"
-#| fig-width: 5
-#| fig-height: 3.5
-
-# Calculate opening rates by beta decile and year
-temp <- opening_sample[!is.na(beta_decile_within_year), 
-                       .(opening_rate = mean(new_branch_zip, na.rm = TRUE)), 
-                       by = .(beta_decile_within_year, yr)]
-temp[, beta_decile := beta_decile_within_year]
-
-# Calculate average opening rates by cycle
-temp1 <- temp[yr %in% 2020:2023, .(opening_rate = mean(opening_rate)), by = beta_decile]
-temp1[, cycle := "Late Cycle"]
-
-temp2 <- temp[yr %in% 2015:2019, .(opening_rate = mean(opening_rate, na.rm = TRUE)), by = beta_decile]
-temp2[, cycle := "Mid Cycle"]
-
-temp3 <- temp[yr %in% 2001:2014, .(opening_rate = mean(opening_rate, na.rm = TRUE)), by = beta_decile]
-temp3[, cycle := "Early Cycle"]
-
-# Combine and winsorize
-temp_combined <- rbind(temp1, temp2, temp3)
-temp_combined[, opening_rate := Winsorize(opening_rate, 
-                                          quantile(opening_rate, probs = c(0.05, 0.95), na.rm = TRUE)), 
-              by = .(beta_decile, cycle)]
-
-# Create plot
-g <- ggplot(temp_combined, aes(x = beta_decile, y = opening_rate * 100, color = cycle)) +
-  geom_point(size = 3, alpha = 0.75, aes(shape = cycle)) +
-  scale_x_continuous(n.breaks = 10) +
-  scale_color_manual(
-    values = c("Late Cycle" = "dodgerblue4",
-               "Mid Cycle" = "tan2",
-               "Early Cycle" = "gray")
-  ) +
-  theme_minimal() +
-  labs(x = "Deposit Beta Decile (Within Year)", 
-       y = "Percent of zip codes with new branches (%)") +
-  theme(legend.position = "bottom", legend.title = element_blank())
-
-print(g)
-
-# Uncomment to save
-# ggsave(file.path(data_dir, "../figures/univar_opening_within_year.jpg"), g, 
-#        width = 5, height = 3.5)
+#| message: false
+#| warning: false
+cat("Large banks mean opening rate by regime:\n")
+cat("2001-2007:", sprintf("%.6f", mean(opening_sample[large_bank == 1 & yr %in% yr_range[[1]]]$new_branch_zip, na.rm = TRUE)), "\n")
+cat("2008-2011:", sprintf("%.6f", mean(opening_sample[large_bank == 1 & yr %in% yr_range[[2]]]$new_branch_zip, na.rm = TRUE)), "\n")
+cat("2012-2019:", sprintf("%.6f", mean(opening_sample[large_bank == 1 & yr %in% yr_range[[3]]]$new_branch_zip, na.rm = TRUE)), "\n")
+cat("2020-2023:", sprintf("%.6f", mean(opening_sample[large_bank == 1 & yr %in% yr_range[[4]]]$new_branch_zip, na.rm = TRUE)), "\n\n")
+cat("Small banks mean opening rate by regime:\n")
+cat("2001-2007:", sprintf("%.6f", mean(opening_sample[large_bank == 0 & yr %in% yr_range[[1]]]$new_branch_zip, na.rm = TRUE)), "\n")
+cat("2008-2011:", sprintf("%.6f", mean(opening_sample[large_bank == 0 & yr %in% yr_range[[2]]]$new_branch_zip, na.rm = TRUE)), "\n")
+cat("2012-2019:", sprintf("%.6f", mean(opening_sample[large_bank == 0 & yr %in% yr_range[[3]]]$new_branch_zip, na.rm = TRUE)), "\n")
+cat("2020-2023:", sprintf("%.6f", mean(opening_sample[large_bank == 0 & yr %in% yr_range[[4]]]$new_branch_zip, na.rm = TRUE)), "\n")
 ```
 
-# Summary Statistics
+```{r}
+#| label: tbl-opening-large-by-cycle
+#| tbl-cap: "Opening Model by Regime — Large Banks"
+#| message: false
+#| warning: false
 
-Basic statistics on the opening sample:
+md_table(etable(opening_large_by_cycle,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  dict = covariate_labels_dict,
+  depvar = FALSE,
+  order = c("Deposit Beta")
+))
+rm(opening_large_by_cycle)
+gc(verbose = FALSE)
+
+# LaTeX (uncomment to use):
+# etable(opening_large_by_cycle, se.below = TRUE,
+#        signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#        dict = covariate_labels_dict, depvar = FALSE,
+#        tex = TRUE, style.tex = style.tex("aer"), order = c("Deposit Beta"))
+```
 
 ```{r}
-#| label: summary-statistics
+#| label: opening-small-by-cycle
+#| message: false
+#| warning: false
 
-# Overall statistics
-cat("Overall Opening Sample Statistics:\n")
-cat("Total potential opening locations:", format(nrow(opening_sample), big.mark = ","), "\n")
-cat("Actual openings:", format(sum(opening_sample$new_branch_zip), big.mark = ","), "\n")
-cat("Overall opening rate:", sprintf("%.4f%%", 100 * mean(opening_sample$new_branch_zip)), "\n\n")
+# Persistent subsets so fixest can find data when computing vcov
+small_r1 <- opening_sample[large_bank == 0 & yr %in% yr_range[[1]]]
+gc(verbose = FALSE)
+opening_small_by_cycle <- list()
+opening_small_by_cycle[[1]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = small_r1, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_small_by_cycle[[2]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = small_r1, vcov = ~RSSDID)
+gc(verbose = FALSE)
+rm(small_r1)
+small_r2 <- opening_sample[large_bank == 0 & yr %in% yr_range[[2]]]
+opening_small_by_cycle[[3]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = small_r2, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_small_by_cycle[[4]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = small_r2, vcov = ~RSSDID)
+rm(small_r2)
+small_r3 <- opening_sample[large_bank == 0 & yr %in% yr_range[[3]]]
+gc(verbose = FALSE)
+opening_small_by_cycle[[5]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = small_r3, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_small_by_cycle[[6]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = small_r3, vcov = ~RSSDID)
+rm(small_r3)
+small_r4 <- opening_sample[large_bank == 0 & yr %in% yr_range[[4]]]
+gc(verbose = FALSE)
+opening_small_by_cycle[[7]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = small_r4, vcov = ~RSSDID)
+gc(verbose = FALSE)
+opening_small_by_cycle[[8]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = small_r4, vcov = ~RSSDID)
+gc(verbose = FALSE)
+rm(small_r4)
+gc(verbose = FALSE)
+```
+
+```{r}
+#| label: tbl-opening-small-by-cycle
+#| tbl-cap: "Opening Model by Regime — Small Banks"
+#| message: false
+#| warning: false
+
+md_table(etable(opening_small_by_cycle,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  dict = covariate_labels_dict,
+  depvar = FALSE,
+  order = c("Deposit Beta")
+))
+rm(opening_small_by_cycle)
+gc(verbose = FALSE)
+
+# LaTeX (uncomment to use):
+# etable(opening_small_by_cycle, se.below = TRUE,
+#        signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#        dict = covariate_labels_dict, depvar = FALSE,
+#        tex = TRUE, style.tex = style.tex("aer"), order = c("Deposit Beta"))
+```
+
+# Table 9: Reduced Form Pooled Opening Model
+
+Replace deposit beta with demographics and concentration (college frac, income, stock market frac, age bins, county deposit HHI, population density; alternative spec uses sophisticated zipcode).
+
+```{r}
+#| label: open-rf-full
+#| message: false
+#| warning: false
+
+open_rf_full <- list()
+open_rf_full[[1]] <- feols(new_branch_zip ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + lag_county_deposit_hhi + population_density + ..ctrl_state_opening, data = opening_sample, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_rf_full[[2]] <- feols(new_branch_zip ~ sophisticated + log(family_income) + factor_age_bin + lag_county_deposit_hhi + population_density + ..ctrl_state_opening, data = opening_sample, vcov = ~RSSDID)
+gc(verbose = FALSE)
+```
+
+```{r}
+#| label: tbl-open-rf-full
+#| tbl-cap: "Reduced Form Pooled Opening Model"
+#| message: false
+#| warning: false
+
+rf_omit <- omit_controls[!omit_controls %in% c("Sophisticated zipcode", "Age Q1-Q2", "Age Q2-Q3", "Age >Q3", "Income", "College frac", "Stock market frac", "County deposit HHI", "Population density", "Zip Deposits")]
+
+md_table(etable(open_rf_full,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  dict = covariate_labels_dict,
+  depvar = FALSE,
+  order = c("College frac", "Stock market frac", "Sophisticated zipcode", "Zip Deposits")
+  # group = list(Controls = rf_omit)
+))
+rm(open_rf_full)
+gc(verbose = FALSE)
+
+# LaTeX (uncomment to use):
+# etable(open_rf_full, se.below = TRUE, signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#        dict = covariate_labels_dict, depvar = FALSE, tex = TRUE, style.tex = style.tex("aer"),
+#        order = c("College frac", "Stock market frac", "Sophisticated zipcode", "Zip Deposits"),
+#        group = list(Controls = rf_omit))
+```
+
+# Reduced Form Opening Model by Bank Size
+
+```{r}
+#| label: open-rf-by-size
+#| message: false
+#| warning: false
+
+rf_large <- opening_sample[large_bank == 1 & !is.na(deposit_beta)]
+rf_small <- opening_sample[large_bank == 0 & !is.na(deposit_beta)]
+
+open_rf_by_size <- list()
+open_rf_by_size[[1]] <- feols(new_branch_zip ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + lag_county_deposit_hhi + population_density + ..ctrl_state_opening, data = rf_large, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_rf_by_size[[2]] <- feols(new_branch_zip ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + ..ctrl_county_opening, data = rf_large, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_rf_by_size[[3]] <- feols(new_branch_zip ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + lag_county_deposit_hhi + population_density + ..ctrl_state_opening, data = rf_small, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_rf_by_size[[4]] <- feols(new_branch_zip ~ college_frac + log(family_income) + dividend_frac + factor_age_bin + ..ctrl_county_opening, data = rf_small, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_rf_by_size[[5]] <- feols(new_branch_zip ~ sophisticated + log(family_income) + factor_age_bin + lag_county_deposit_hhi + population_density + ..ctrl_state_opening, data = rf_large, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_rf_by_size[[6]] <- feols(new_branch_zip ~ sophisticated + log(family_income) + factor_age_bin + ..ctrl_county_opening, data = rf_large, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_rf_by_size[[7]] <- feols(new_branch_zip ~ sophisticated + log(family_income) + factor_age_bin + lag_county_deposit_hhi + population_density + ..ctrl_state_opening, data = rf_small, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_rf_by_size[[8]] <- feols(new_branch_zip ~ sophisticated + log(family_income) + factor_age_bin + ..ctrl_county_opening, data = rf_small, vcov = ~RSSDID)
+gc(verbose = FALSE)
+rm(rf_large, rf_small)
+gc(verbose = FALSE)
+```
+
+```{r}
+#| label: tbl-open-rf-by-size
+#| tbl-cap: "Reduced Form Opening Model by Bank Size"
+#| message: false
+#| warning: false
+
+md_table(etable(open_rf_by_size,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  dict = covariate_labels_dict,
+  depvar = FALSE,
+  order = c("College frac", "Stock market frac", "Sophisticated zipcode", "Zip Deposits")
+  # group = list(Controls = rf_omit)
+))
+rm(open_rf_by_size)
+gc(verbose = FALSE)
+
+# LaTeX (uncomment to use):
+# etable(open_rf_by_size, se.below = TRUE, signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#        dict = covariate_labels_dict, depvar = FALSE, tex = TRUE, style.tex = style.tex("aer"),
+#        order = c("College frac", "Stock market frac", "Sophisticated zipcode", "Zip Deposits"),
+#        group = list(Controls = rf_omit))
+```
+
+# Usage
+
+Examine how changes in branch usage during the pandemic relate to opening decisions (2020–2023), following the same setup as the closure-usage analysis.
+
+## Prepare branch visit data
+
+```{r}
+#| label: prepare-opening-usage-data
+#| message: false
+#| warning: false
+
+# Load branch visit data (SafeGraph)
+branch_visits <- readRDS(file.path(data_dir, "bank_branch_visits_count_2019_2022.rds"))
+setDT(branch_visits)
+branch_visits[, yr := year(DATE_RANGE_START)]
+branch_visits <- branch_visits[yr %in% c(2019, 2021)]
+
+# Load branch characteristics to get zip codes
+branch_chars <- readRDS("C:/OneDrive/data/fdic_sod_1995_2025_simple.rds")
+setDT(branch_chars)
+if ("YEAR" %in% names(branch_chars)) setnames(branch_chars, "YEAR", "yr")
+if ("ZIPBR" %in% names(branch_chars)) setnames(branch_chars, "ZIPBR", "zip")
+
+# Unique UNINUMBR–zip (use most recent year per branch)
+branch_zip <- branch_chars[order(UNINUMBR, -yr)][, .SD[1], by = UNINUMBR][, .(UNINUMBR, zip)]
+
+# Merge visits with zip
+branch_visits <- merge(branch_visits, branch_zip, by = "UNINUMBR")
+
+# Average distance from home in 2019 (pre-pandemic)
+distance <- branch_visits[yr == 2019, .(distance_km = mean(DISTANCE_FROM_HOME, na.rm = TRUE) / 1000), by = zip]
+
+# Aggregate to zip level for zips with 5+ branches
+branch_visits <- branch_visits[, .(no_branches = .N, number_of_visits = sum(RAW_VISIT_COUNTS, na.rm = TRUE)), by = .(zip, yr)]
+branch_visits <- branch_visits[no_branches > 4]
+
+# Change in visits 2019 → 2021
+branch_visits <- dcast(branch_visits, zip ~ yr, value.var = "number_of_visits")
+branch_visits[, change_visits := (`2019` - `2021`) / `2019`]
+
+# Merge distance and winsorize
+branch_visits <- merge(branch_visits, distance, by = "zip")
+branch_visits[, change_visits := DescTools::Winsorize(change_visits, quantile(change_visits, probs = c(0.01, 0.99), na.rm = TRUE))]
+branch_visits[, distance_km := DescTools::Winsorize(distance_km, quantile(distance_km, probs = c(0.01, 0.99), na.rm = TRUE))]
+branch_visits[, zip := str_pad(zip, 5, "left", "0")]
+
+rm(branch_chars, branch_zip, distance)
+gc(verbose = FALSE)
+cat("Branch usage data prepared for", nrow(branch_visits), "zip codes.\n")
+```
+
+## Openings and branch usage (2020–2023)
+
+```{r}
+#| label: opening-usage-regressions
+#| message: false
+#| warning: false
+
+# Merge opening sample with usage data; restrict to pandemic-era years
+openings <- merge(opening_sample, branch_visits[, c("zip", "change_visits", "distance_km")], by.x = "zipcode", by.y = "zip")
+openings <- openings[yr >= 2020]
+
+yr_1 <- 2020
+yr_2 <- 2023
+
+# Persistent subsets for vcov
+openings_full <- openings[yr %in% yr_1:yr_2]
+openings_large <- openings[large_bank == 1 & yr %in% yr_1:yr_2]
+openings_small <- openings[large_bank == 0 & yr %in% yr_1:yr_2]
+
+# Full sample: baseline and with usage (one at a time to free memory)
+open_usage_full <- list()
+open_usage_full[[1]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = openings_full, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_usage_full[[2]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = openings_full, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_usage_full[[3]] <- feols(new_branch_zip ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_state_opening, data = openings_full, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_usage_full[[4]] <- feols(new_branch_zip ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_county_opening, data = openings_full, vcov = ~RSSDID)
+gc(verbose = FALSE)
 
 # By bank size
-cat("By Bank Size:\n")
-opening_by_size <- opening_sample[, .(
-  n_locations = .N,
-  n_openings = sum(new_branch_zip),
-  opening_rate = mean(new_branch_zip)
-), by = large_bank]
-opening_by_size[, bank_type := ifelse(large_bank == 1, "Large Banks", "Small Banks")]
-print(opening_by_size[, .(bank_type, n_locations, n_openings, 
-                          opening_rate = sprintf("%.4f%%", 100 * opening_rate))])
+open_usage_by_size <- list()
+open_usage_by_size[[1]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = openings_large, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_usage_by_size[[2]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = openings_large, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_usage_by_size[[3]] <- feols(new_branch_zip ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_state_opening, data = openings_large, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_usage_by_size[[4]] <- feols(new_branch_zip ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_county_opening, data = openings_large, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_usage_by_size[[5]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_state_opening, data = openings_small, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_usage_by_size[[6]] <- feols(new_branch_zip ~ deposit_beta + ..ctrl_county_opening, data = openings_small, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_usage_by_size[[7]] <- feols(new_branch_zip ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_state_opening, data = openings_small, vcov = ~RSSDID)
+gc(verbose = FALSE)
+open_usage_by_size[[8]] <- feols(new_branch_zip ~ deposit_beta + change_visits + log(distance_km) + ..ctrl_county_opening, data = openings_small, vcov = ~RSSDID)
+gc(verbose = FALSE)
+rm(openings_full, openings_large, openings_small)
+gc(verbose = FALSE)
 
-cat("\n")
-
-# By cycle
-cat("By Rate Cycle:\n")
-opening_sample[, cycle := ifelse(yr <= 2014, "Early (2001-2014)",
-                                 ifelse(yr <= 2019, "Mid (2015-2019)", 
-                                        "Late (2020-2023)"))]
-opening_by_cycle <- opening_sample[yr >= 2001, .(
-  n_locations = .N,
-  n_openings = sum(new_branch_zip),
-  opening_rate = mean(new_branch_zip)
-), by = cycle]
-opening_by_cycle <- opening_by_cycle[order(cycle)]
-print(opening_by_cycle[, .(cycle, n_locations, n_openings, 
-                           opening_rate = sprintf("%.4f%%", 100 * opening_rate))])
+# Mean opening rates
+cat("Mean opening rates (2020–2023):\n")
+cat("All banks:", sprintf("%.6f", mean(openings[yr %in% yr_1:yr_2]$new_branch_zip, na.rm = TRUE)), "\n")
+cat("Large banks:", sprintf("%.6f", mean(openings[large_bank == 1 & yr %in% yr_1:yr_2]$new_branch_zip, na.rm = TRUE)), "\n")
+cat("Small banks:", sprintf("%.6f", mean(openings[large_bank == 0 & yr %in% yr_1:yr_2]$new_branch_zip, na.rm = TRUE)), "\n")
 ```
-
-# Data Quality Checks
 
 ```{r}
-#| label: data-quality-checks
+#| label: tbl-open-usage-full
+#| tbl-cap: "Opening Model with Branch Usage (2020–2023)"
+#| message: false
+#| warning: false
 
-cat("Data Quality Checks:\n\n")
+usage_omit <- omit_controls[!omit_controls %in% c("Deposit Beta", "Drop in visits", "Log(Distance km)", "Zip Deposits")]
 
-# Check deposit beta distribution
-cat("Deposit Beta Distribution:\n")
-cat("Mean:", sprintf("%.4f", mean(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
-cat("Median:", sprintf("%.4f", median(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
-cat("SD:", sprintf("%.4f", sd(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
-cat("Min:", sprintf("%.4f", min(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
-cat("Max:", sprintf("%.4f", max(opening_sample$deposit_beta, na.rm = TRUE)), "\n")
-cat("Missing:", sum(is.na(opening_sample$deposit_beta)), "\n\n")
+md_table(etable(open_usage_full,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  headers = list("Baseline" = 2, "With Usage" = 2),
+  dict = covariate_labels_dict,
+  depvar = FALSE,
+  order = c("Deposit Beta")
+  # group = list(Controls = usage_omit)
+))
+rm(open_usage_full)
+gc(verbose = FALSE)
 
-# Check key variables
-cat("Missing Values:\n")
-key_vars <- c("deposit_beta", "df_per_dollar", "family_income", "college_frac", 
-              "lag_county_mortgage_volume", "lag_county_cra_volume", 
-              "population_density", "bank_assets", "beta_decile_within_bank", 
-              "beta_decile_within_year")
-for (var in key_vars) {
-  if (var %in% names(opening_sample)) {
-    n_missing <- sum(is.na(opening_sample[[var]]))
-    pct_missing <- 100 * n_missing / nrow(opening_sample)
-    cat(sprintf("  %s: %s (%.2f%%)\n", var, 
-                format(n_missing, big.mark = ","), pct_missing))
-  } else {
-    cat(sprintf("  %s: NOT FOUND IN DATA\n", var))
-  }
-}
+# LaTeX (uncomment to use):
+# etable(open_usage_full, se.below = TRUE, signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#        headers = list("Baseline" = 2, "With Usage" = 2), dict = covariate_labels_dict,
+#        depvar = FALSE, tex = TRUE, style.tex = style.tex("aer"),
+#        order = c("Deposit Beta"), group = list(Controls = usage_omit))
 ```
+
+```{r}
+#| label: tbl-open-usage-by-size
+#| tbl-cap: "Opening Model with Branch Usage by Bank Size (2020–2023)"
+#| message: false
+#| warning: false
+
+md_table(etable(open_usage_by_size,
+  se.below = TRUE,
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+  headers = list("Large Banks" = 4, "Small Banks" = 4),
+  dict = covariate_labels_dict,
+  depvar = FALSE,
+  order = c("Deposit Beta")
+  # group = list(Controls = usage_omit)
+))
+rm(open_usage_by_size, openings, branch_visits)
+gc(verbose = FALSE)
+
+# LaTeX (uncomment to use):
+# etable(open_usage_by_size, se.below = TRUE, signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.10),
+#        headers = list("Large Banks" = 4, "Small Banks" = 4), dict = covariate_labels_dict,
+#        depvar = FALSE, tex = TRUE, style.tex = style.tex("aer"),
+#        order = c("Deposit Beta"), group = list(Controls = usage_omit))
+```
+
+

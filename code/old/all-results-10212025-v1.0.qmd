@@ -802,6 +802,7 @@ sd(df[yr==2012 & large_bank==0]$resid_log_deposits,na.rm = T)
 sd(df[yr==2012 & large_bank==0]$resid_same_zip_prior_3yr_branches,na.rm = T)
 sd(df[yr==2012 & large_bank==0]$resid_legacy_branch,na.rm = T)
 ```
+
 # Baseline Closure Model
 
 ```{r}

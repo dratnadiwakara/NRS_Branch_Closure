@@ -67,10 +67,14 @@ open_data <- open_data[!RSSDID %in% ots_transfer_banks]
 # ==============================================================================
 
 # CBSA-County crosswalk
+# Note: Some CBSA crosswalk files include both CBSA codes and metropolitan division codes
+# Keep only one CBSA per county to avoid duplicate zip-CBSA mappings
 cbsa_county <- fread(file.path(data_dir, "cbsa2fipsxw.csv"))
 cbsa_county[, county := paste0(str_pad(fipsstatecode, 2, "left", "0"), 
                                str_pad(fipscountycode, 3, "left", "0"))]
 cbsa_county <- unique(cbsa_county[, .(cbsacode, county)])
+# Deduplicate: keep first CBSA code per county (in case of metro divisions)
+cbsa_county <- cbsa_county[!duplicated(county)]
 
 # Zip-County crosswalk (keep primary county for each zip)
 zip_county <- fread(file.path(data_dir, "ZIP_COUNTY_092020.csv"))
@@ -81,6 +85,8 @@ zip_county[, COUNTY := str_pad(COUNTY, 5, "left", "0")]
 
 # Add CBSA to zip-county
 zip_county <- merge(zip_county, cbsa_county, by.x = "COUNTY", by.y = "county", all.x = TRUE)
+# Deduplicate: ensure one entry per ZIP
+zip_county <- zip_county[!duplicated(ZIP)]
 
 # Add CBSA to branch data
 open_data <- merge(open_data, cbsa_county, by.x = "STCNTYBR", by.y = "county", all.x = TRUE)
@@ -92,7 +98,6 @@ open_data <- merge(open_data, cbsa_county, by.x = "STCNTYBR", by.y = "county", a
 # Get unique bank-CBSA-year combinations (banks operating in each CBSA)
 bank_cbsa_yr <- unique(open_data[!is.na(cbsacode), .(RSSDID, cbsacode, yr)])
 bank_cbsa_yr[, yr := yr + 1]  # Shift to represent "previous year presence"
-setnames(bank_cbsa_yr, "yr", "yr")
 
 # ==============================================================================
 # 5. Create All Possible Bank-Zip-Year Combinations
@@ -100,9 +105,11 @@ setnames(bank_cbsa_yr, "yr", "yr")
 
 # Get all zips in CBSAs
 all_zips <- zip_county[!is.na(cbsacode), .(zipcode = ZIP, COUNTY, cbsacode)]
+# Deduplicate: ensure one entry per (zipcode, COUNTY, cbsacode)
+all_zips <- unique(all_zips, by = c("zipcode", "COUNTY", "cbsacode"))
 
-# Get all bank-year combinations
-all_bank_yr <- unique(open_data[yr >= 1999, .(RSSDID, yr)])
+# Get all bank-year combinations (starting from 2000)
+all_bank_yr <- unique(open_data[yr >= 2000, .(RSSDID, yr)])
 
 # Create bank-zip-year combinations for banks with CBSA presence
 # Join banks to CBSAs they operate in, then to all zips in those CBSAs
@@ -115,7 +122,7 @@ gc()
 # ==============================================================================
 
 # Count new branches by bank-zip-year
-new_branches <- open_data[yr >= 1999 & new_branch == 1, 
+new_branches <- open_data[yr >= 2000 & new_branch == 1, 
                           .(new_branch_zip = 1), 
                           by = .(RSSDID, zip, yr)]
 
@@ -125,6 +132,18 @@ bank_zip <- merge(bank_zip, new_branches,
                   by.y = c("RSSDID", "yr", "zip"), 
                   all.x = TRUE)
 bank_zip[is.na(new_branch_zip), new_branch_zip := 0]
+
+# Identify new CBSA entries (bank opens first branch in a CBSA)
+# This captures zip codes in CBSAs where banks are entering for the first time
+new_cbsa_entries <- bank_zip[new_branch_zip == 1 & !is.na(cbsacode), 
+                             .(RSSDID, yr, cbsacode)]
+new_cbsa_entries <- unique(new_cbsa_entries)
+new_cbsa_entries[, new_cbsa_entry := 1]
+
+bank_zip <- merge(bank_zip, new_cbsa_entries, 
+                  by = c("RSSDID", "yr", "cbsacode"), 
+                  all.x = TRUE)
+bank_zip[is.na(new_cbsa_entry), new_cbsa_entry := 0]
 
 # Count existing branches by bank-zip in previous year
 existing_branches <- branch_year[, .(n_branches = .N), by = .(RSSDID, zip, yr)]
@@ -136,7 +155,11 @@ bank_zip <- merge(bank_zip, existing_branches,
                   all.x = TRUE)
 bank_zip[is.na(n_branches), n_branches := 0]
 
-# Keep only zips where bank has no existing branches (potential opening locations)
+# Keep only zips where:
+# - Bank has no existing branches in that zip (potential opening locations)
+# - Bank had CBSA presence in prior year OR opened a branch there OR is entering CBSA for first time
+# Note: Since bank_zip is already constructed from prior CBSA presence, we mainly need to add
+# zip codes from new CBSA entries where the bank didn't have prior presence
 bank_zip <- bank_zip[n_branches == 0]
 bank_zip <- bank_zip[zipcode %in% unique(branch_year$zip)]
 setindex(bank_zip,zipcode,yr)
@@ -171,8 +194,7 @@ setindex(county_controls,county_code,year)
 
 setindex(bank_zip,COUNTY,yr)
 bank_zip <- merge(bank_zip, county_controls, 
-                  by.x = c("COUNTY", "yr"), by.y = c("county_code", "year"), 
-                  all.x = TRUE)
+                  by.x = c("COUNTY", "yr"), by.y = c("county_code", "year"))
 setindex(bank_zip,NULL)
 gc()
 
@@ -243,61 +265,115 @@ gc()
 # 11. Add County-Level HMDA and CRA Volumes
 # ==============================================================================
 
-# # HMDA county-level mortgage volume
-# hmda <- readRDS(file.path(data_dir, "hmda_bank_county_yr.rds"))
-# hmda_county <- hmda[, .(mortgage_vol = sum(bank_county_mortgage_volume, na.rm = TRUE)), 
-#                     by = .(county_code, year)]
-# hmda_county <- hmda_county %>%
-#   arrange(county_code, year) %>%
-#   group_by(county_code) %>%
-#   mutate(lag_county_mortgage_vol = lag(mortgage_vol)) %>%
-#   ungroup() %>%
-#   select(county_code, year, lag_county_mortgage_vol) %>%
-#   data.table()
-# 
-# # Backfill 2000-2003
-# hmda_2004 <- hmda_county[year == 2005]  # 2005 has lag from 2004
-# for (y in 2001:2004) {
-#   temp <- copy(hmda_2004)
-#   temp[, year := y]
-#   hmda_county <- rbind(hmda_county, temp)
-# }
-# 
-# bank_zip <- merge(bank_zip, hmda_county, 
-#                   by.x = c("COUNTY", "yr"), by.y = c("county_code", "year"), 
-#                   all.x = TRUE)
-# bank_zip[is.na(lag_county_mortgage_vol), lag_county_mortgage_vol := 0]
-# 
-# # CRA county-level small business lending
-# cra <- readRDS(file.path(data_dir, "cra_bank_county_yr.rds"))
-# cra_county <- cra[, .(cra_vol = sum(loan_amt, na.rm = TRUE)), by = .(county_code, year)]
-# cra_county <- cra_county %>%
-#   arrange(county_code, year) %>%
-#   group_by(county_code) %>%
-#   mutate(lag_county_cra_vol = lag(cra_vol)) %>%
-#   ungroup() %>%
-#   select(county_code, year, lag_county_cra_vol) %>%
-#   data.table()
-# 
-# # Backfill 2000-2003
-# cra_2004 <- cra_county[year == 2005]
-# for (y in 2001:2004) {
-#   temp <- copy(cra_2004)
-#   temp[, year := y]
-#   cra_county <- rbind(cra_county, temp)
-# }
-# 
-# bank_zip <- merge(bank_zip, cra_county, 
-#                   by.x = c("COUNTY", "yr"), by.y = c("county_code", "year"), 
-#                   all.x = TRUE)
-# bank_zip[is.na(lag_county_cra_vol), lag_county_cra_vol := 0]
+# HMDA county-level mortgage volume
+hmda <- readRDS(file.path(data_dir, "hmda_bank_county_yr.rds"))
+hmda_county <- hmda[, .(mortgage_vol = sum(bank_county_mortgage_volume, na.rm = TRUE)), 
+                    by = .(county_code, year)]
+hmda_county <- hmda_county %>%
+  arrange(county_code, year) %>%
+  group_by(county_code) %>%
+  mutate(lag_county_mortgage_volume = lag(mortgage_vol)) %>%
+  ungroup() %>%
+  select(county_code, year, lag_county_mortgage_volume) %>%
+  data.table()
 
+# Backfill 2000: Use 2001's actual mortgage volume as lag for 2000
+hmda_2001_actual <- hmda[year == 2001, .(mortgage_vol = sum(bank_county_mortgage_volume, na.rm = TRUE)), by = .(county_code)]
+hmda_2001_actual[, year := 2000]
+hmda_2001_actual[, lag_county_mortgage_volume := mortgage_vol]
+hmda_2001_actual[, mortgage_vol := NULL]
+hmda_county <- rbind(hmda_county, hmda_2001_actual)
+
+# Backfill 2002-2004 with 2004 data (2005 has lag from 2004)
+hmda_2004 <- hmda_county[year == 2005]  # 2005 has lag from 2004
+for (y in 2000:2004) {
+  temp <- copy(hmda_2004)
+  temp[, year := y]
+  hmda_county <- rbind(hmda_county, temp)
+}
+
+# Extend 2024 and 2025 with 2023's lag value (from 2022)
+hmda_2023 <- hmda_county[year == 2023]  # 2023 has lag from 2022
+if (nrow(hmda_2023) > 0) {
+  for (y in 2024:2025) {
+    temp <- copy(hmda_2023)
+    temp[, year := y]
+    hmda_county <- rbind(hmda_county, temp)
+  }
+}
+
+hmda_county <- unique(hmda_county, by = c("county_code", "year"))
+setindex(hmda_county,county_code,year)
+setindex(bank_zip,COUNTY,yr)
+
+setindex(bank_zip, COUNTY, yr)
+setindex(hmda_county, county_code, year)
+bank_zip <- merge(bank_zip, hmda_county, 
+                  by.x = c("COUNTY", "yr"), by.y = c("county_code", "year"), 
+                  all.x = TRUE)
+setindex(bank_zip, NULL)
+bank_zip[is.na(lag_county_mortgage_volume), lag_county_mortgage_volume := 0]
+
+# CRA county-level small business lending
+cra <- readRDS(file.path(data_dir, "cra_bank_county_yr.rds"))
+cra_county <- cra[, .(cra_vol = sum(loan_amt, na.rm = TRUE)), by = .(county_code, year)]
+cra_county <- cra_county %>%
+  arrange(county_code, year) %>%
+  group_by(county_code) %>%
+  mutate(lag_county_cra_volume = lag(cra_vol)) %>%
+  ungroup() %>%
+  select(county_code, year, lag_county_cra_volume) %>%
+  data.table()
+
+# Backfill 2000: Use 2001's actual CRA volume as lag for 2000
+cra_2001_actual <- cra[year == 2001, .(cra_vol = sum(loan_amt, na.rm = TRUE)), by = .(county_code)]
+cra_2001_actual[, year := 2000]
+cra_2001_actual[, lag_county_cra_volume := cra_vol]
+cra_2001_actual[, cra_vol := NULL]
+cra_county <- rbind(cra_county, cra_2001_actual)
+
+# Backfill 2002-2004 with 2004 data (2005 has lag from 2004)
+cra_2004 <- cra_county[year == 2005]
+for (y in 2000:2004) {
+  temp <- copy(cra_2004)
+  temp[, year := y]
+  cra_county <- rbind(cra_county, temp)
+}
+
+# Extend 2024 and 2025 with 2023's lag value (from 2022)
+cra_2023 <- cra_county[year == 2023]  # 2023 has lag from 2022
+if (nrow(cra_2023) > 0) {
+  for (y in 2024:2025) {
+    temp <- copy(cra_2023)
+    temp[, year := y]
+    cra_county <- rbind(cra_county, temp)
+  }
+}
+
+cra_county <- unique(cra_county, by = c("county_code", "year"))
+
+setindex(bank_zip, COUNTY, yr)
+setindex(cra_county, county_code, year)
+bank_zip <- merge(bank_zip, cra_county, 
+                  by.x = c("COUNTY", "yr"), by.y = c("county_code", "year"), 
+                  all.x = TRUE)
+setindex(bank_zip, NULL)
+bank_zip[is.na(lag_county_cra_volume), lag_county_cra_volume := 0]
+gc()
 # ==============================================================================
 # 12. Add Deposit Betas and Final Cleanup
 # ==============================================================================
 
-# Remove temporary columns
-bank_zip[, n_branches := NULL]
+# Remove temporary environment variables that are no longer needed
+rm(list = c("branch_year", "open_data", "banks_with_openings", "bank_opening_pattern", 
+            "ots_transfer_banks", "cbsa_county", "zip_county", "all_zips", 
+            "bank_cbsa_yr", "all_bank_yr", "new_branches", "existing_branches",
+            "new_cbsa_entries", "zip_demo", "county_controls", "county_hhi", 
+            "bank_county_dep", "bank_hhi", "bank_level", "call_data", 
+            "zip_deposits", "hmda", "hmda_county", "hmda_2001_actual", 
+            "hmda_2004", "hmda_2023", "cra", "cra_county", "cra_2001_actual", 
+            "cra_2004", "cra_2023", "temp", "y", "i"))
+gc()
 
 # Load deposit beta models
 beta_cycles <- readRDS(file.path(data_dir, "deposit_beta_results.rds"))
@@ -324,6 +400,8 @@ bank_zip[, large_bank := fifelse(RSSDID %in% large_banks, 1L, 0L)]
 bank_zip <- bank_zip[!is.na(sophisticated)]
 bank_zip <- bank_zip[yr %in% 2000:2025]
 bank_zip <- bank_zip[!is.na(trans_accts_frac_assets)]
+setnames(bank_zip,c("median_income","pct_college_educated"),c("family_income","college_frac"))
+bank_zip[,college_frac:=college_frac/100]
 gc()
 
 cat("Predicting deposit betas...\n")
@@ -332,6 +410,7 @@ cat("Predicting deposit betas...\n")
 for (i in 1:length(beta_cycles)) {
   cat("  Cycle", i, "of", length(beta_cycles), "...\n")
   cycle_nm <- names(beta_cycles)[i]
+  cycle_data <- beta_cycles[[cycle_nm]]$data
   bank_zip[, pred_int_exp_chg := predict(beta_cycles[[i]]$reg, newdata = bank_zip)]
   setnames(bank_zip, "pred_int_exp_chg", paste0("pred_int_exp_chg_", cycle_nm))
   gc()
@@ -362,7 +441,7 @@ bank_zip[, lag_county_mortgage_volume := lag_county_mortgage_volume + 1]
 bank_zip[, lag_county_cra_volume := lag_county_cra_volume + 1]
 
 # Save final sample with deposit betas
-output_path <- file.path(data_dir, "branch_opening_analysis_sample_with_beta.rds")
+output_path <- file.path(data_dir, "branch_opening_analysis_sample_with_deposit_beta.rds")
 saveRDS(bank_zip, output_path)
 
 cat("\nBranch opening analysis sample created successfully!\n")

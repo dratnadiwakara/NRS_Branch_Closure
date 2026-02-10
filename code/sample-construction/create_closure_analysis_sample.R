@@ -83,7 +83,10 @@ bank_hhi <- branch_year[, c("RSSDID", "DEPSUMBR", "STCNTYBR", "yr")]
 bank_hhi <- bank_hhi[, .(bank_county_deposits = sum(DEPSUMBR)), by = .(yr, STCNTYBR, RSSDID)]
 bank_hhi[, bank_deposits := sum(bank_county_deposits), by = .(yr, RSSDID)]
 bank_hhi[, deposits_share := bank_county_deposits / bank_deposits]
+setindex(bank_hhi, STCNTYBR, yr)
+setindex(hhi, STCNTYBR, yr)
 bank_hhi <- merge(bank_hhi, hhi, by = c("STCNTYBR", "yr"))
+setindex(bank_hhi, NULL)
 bank_hhi[, w_hhi := deposits_share * deposits_state_hhi]
 
 hhi_bank_level <- bank_hhi[, .(bank_hhi = sum(w_hhi)), by = .(RSSDID, yr)]
@@ -108,10 +111,13 @@ setorder(call_reports, ID_RSSD, yr)
 call_reports[, uninsured_deposits_frac := nafill(uninsured_deposits_frac, type = "nocb"), by = ID_RSSD]
 
 # Merge HHI with call reports
+setindex(hhi_bank_level, RSSDID, yr)
+setindex(call_reports, ID_RSSD, yr)
 bank_level_data <- merge(hhi_bank_level, call_reports, 
                          by.x = c("RSSDID", "yr"), 
                          by.y = c("ID_RSSD", "yr"), 
                          all.x = TRUE)
+setindex(bank_level_data, NULL)
 bank_level_data <- bank_level_data[!is.na(bank_assets)]
 
 # ==============================================================================
@@ -143,10 +149,13 @@ hmda_bank_county_yr <- hmda_bank_county_yr %>%
   data.table()
 
 # Merge with branch data
+setindex(branch_df, RSSDID, yr, STCNTYBR)
+setindex(hmda_bank_county_yr, RSSD, year, county_code)
 branch_df <- merge(branch_df, hmda_bank_county_yr, 
                   by.x = c("RSSDID", "yr", "STCNTYBR"), 
                   by.y = c("RSSD", "year", "county_code"), 
                   all.x = TRUE)
+setindex(branch_df, NULL)
 
 # Handle missing values: set to 0 if bank appears in HMDA, then add 1 for log
 branch_df[, lag_bank_county_mortgage_volume := 
@@ -175,10 +184,13 @@ cra_bank_county_yr <- cra_bank_county_yr %>%
   data.table()
 
 # Merge with branch data
+setindex(branch_df, RSSDID, yr, STCNTYBR)
+setindex(cra_bank_county_yr, RSSD, year, county_code)
 branch_df <- merge(branch_df, cra_bank_county_yr, 
                   by.x = c("RSSDID", "yr", "STCNTYBR"), 
                   by.y = c("RSSD", "year", "county_code"), 
                   all.x = TRUE)
+setindex(branch_df, NULL)
 
 # Handle missing values: set to 0 if bank appears in CRA, then add 1 for log
 branch_df[, lag_bank_county_cra_volume := 
@@ -193,26 +205,38 @@ branch_df[, lag_bank_county_cra_volume := lag_bank_county_cra_volume + 1]
 zip_demo_data[, yr := yr + 1]
 
 # Merge branch data with zip demographics
+setindex(branch_df, zip, yr)
+setindex(zip_demo_data, zip, yr)
 final_sample <- merge(branch_df, zip_demo_data, 
                       by.x = c("zip", "yr"), 
                       by.y = c("zip", "yr"))
+setindex(final_sample, NULL)
 
 # Ensure STCNTYBR is formatted as 5-digit character string
 final_sample[, STCNTYBR := str_pad(STCNTYBR, 5, "left", "0")]
 
 # Merge with county controls
+setindex(final_sample, STCNTYBR, yr)
+setindex(county_control_df, county_code, year)
 final_sample <- merge(final_sample, county_control_df, 
                       by.x = c("STCNTYBR", "yr"), 
                       by.y = c("county_code", "year"))
+setindex(final_sample, NULL)
 
 # Merge with branch visits
+setindex(final_sample, UNINUMBR)
+setindex(branch_visits, UNINUMBR)
 final_sample <- merge(final_sample, branch_visits, 
                       by = "UNINUMBR", all.x = TRUE)
+setindex(final_sample, NULL)
 
 # Merge with bank-level data
+setindex(final_sample, RSSDID, yr)
+setindex(bank_level_data, RSSDID, yr)
 final_sample <- merge(final_sample, bank_level_data, 
                       by.x = c("RSSDID", "yr"), 
                       by.y = c("RSSDID", "yr"))
+setindex(final_sample, NULL)
 
 
 # Sort by branch and year

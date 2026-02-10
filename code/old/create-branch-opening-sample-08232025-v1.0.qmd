@@ -1,0 +1,698 @@
+---
+title: "create-branch-opening-sample"
+warning: false
+format:
+  pdf: 
+    echo: false
+    toc: false
+    toc-depth: 3
+    number-sections: true
+    self-contained: true
+    table-caption: true
+    fig-cap-location: top
+    fig-pos: H
+    include-in-header: 
+      text: |
+        \usepackage{pdflscape}
+        \usepackage{caption}
+---
+
+```{r}
+rm(list=ls())
+library(data.table)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(lfe)
+library(fixest)
+library(stargazer)
+library(gridExtra)
+library(lmtest)
+library(simplermarkdown)
+library(DescTools)
+library(stringr)
+library(lubridate)
+library(purrr)
+
+# source('https://raw.githubusercontent.com/dratnadiwakara/r-utilities/refs/heads/main/summary_stat_tables.R')
+# source('https://raw.githubusercontent.com/dratnadiwakara/r-utilities/main/functions.R')
+# source('https://raw.githubusercontent.com/dratnadiwakara/r-utilities/refs/heads/main/plot_dual_axis.R')
+
+
+table_output_type="text"
+
+
+tryCatch({
+  if(knitr::opts_knit$get("rmarkdown.pandoc.to")=="latex") {
+    table_output_type="latex"
+  }
+},error=function(e) {})
+
+save <- F
+
+options("scipen"=100, "digits"=4)
+gc()
+```
+
+
+```{r}
+#| eval: true
+bank_chars <- readRDS('../data/sod-bank-chars-1987-2024.rds')
+bank_chars[, bank_assets := as.numeric(gsub(",", "", ASSET))]
+
+branch_year <- readRDS('../data/sod-branch-year-1987-2024.rds')
+branch_year <- branch_year[RSSDID %in% bank_chars$RSSDID]
+# branch_year[,active_in_2012:= ifelse(UNINUMBR %in% unique(branch_year[YEAR==2007]$UNINUMBR),1,0)]
+branch_year <- branch_year[YEAR>=1987]
+branch_year <- merge(branch_year,bank_chars[,c("RSSDID","RSSDHCR","YEAR","bank_assets")],by=c("RSSDID","YEAR"))
+
+
+branch_chars <- readRDS('../data/sod-branch-chars-1987-2024.rds')
+
+branch_year <- merge(branch_year,branch_chars[,c("UNINUMBR","STCNTYBR","ZIPBR","ADDRESBR")],by=c("UNINUMBR"),all.x=T)
+setnames(branch_year,c("ZIPBR","YEAR"),c("zip","yr"))
+branch_year[,zip:=str_pad(zip,5,"left","0")]
+branch_year[,STCNTYBR:=str_pad(STCNTYBR,5,"left","0")]
+branch_year[,address:=paste(tolower(ADDRESBR),zip)]
+```
+
+
+
+
+```{r}
+# identify new branches
+open_data <- branch_year %>%
+                arrange(UNINUMBR,yr) %>%
+                group_by(UNINUMBR) %>%
+                mutate(
+                  prev_year = lag(yr),
+                  new_branch = ifelse(is.na(prev_year) ,1,0),
+                  state:=substr(STCNTYBR,1,2)
+                ) %>%
+                ungroup() %>% data.table()
+
+# Excluding OTS to FDIC branches
+tt <- open_data[new_branch==1 & yr %in% 2004:2011,.(no_new_branches=.N),by=.(RSSDID,yr)]
+tt <- dcast(tt,RSSDID~yr)
+exclude_2011 <- tt[is.na(`2004`) & is.na(`2005`) & is.na(`2006`) & is.na(`2007`) & is.na(`2008`) & is.na(`2009`) & is.na(`2010`) & `2011`>0]$RSSDID
+open_data <- open_data[!RSSDID %in% exclude_2011]
+
+
+# merge CBSA
+# #https://www.nber.org/research/data/census-core-based-statistical-area-cbsa-federal-information-processing-series-fips-county-crosswalk
+cbsa_county <- fread("C:/Users/e3dxr03/Downloads/cbsa2fipsxw.csv")
+cbsa_county[,countyfips:=paste0(str_pad(fipsstatecode,2,"left","0"),str_pad(fipscountycode,3,"left","0"))]
+cbsa_county <- cbsa_county[,c("cbsacode","countyfips")]
+
+open_data <- merge(open_data,cbsa_county,by.x = c("STCNTYBR"),by.y="countyfips",all.x=T)
+
+# identify state and CBSA presence for each bank in the previous year
+open_data[,state_presence := 1, by=.(RSSDID,state,yr)]
+open_data[,cbsa_presence:=1, by=.(RSSDID,cbsacode,yr)]
+open_data[,cbsa_presence:=ifelse(is.na(cbsacode),NA,cbsa_presence)]
+open_data[,yr_prev := yr+1]
+
+state_presence_prev <- open_data[,.(state_presence_prev=max(state_presence)),by=.(RSSDID,state,yr_prev)]
+setkey(state_presence_prev,RSSDID,state)
+
+cbsa_presence_prev <- open_data[,.(cbsa_presence_prev=max(cbsa_presence)),by=.(RSSDID,cbsacode,yr_prev)]
+setkey(cbsa_presence_prev,RSSDID,cbsacode)
+```
+```{r}
+# all bank-zip combinations
+gc()
+library(zipcodeR)
+library(tidycensus)
+download_zip_data(force = F)
+data("fips_codes")
+fips_data <- as.data.table(fips_codes)
+fips_data <- fips_data[,.(state_code,state)]
+fips_data <- fips_data[!duplicated(fips_data)]
+
+all_zips <- data.table(zip_code_db)
+all_zips <- all_zips[,.(zipcode,state)]
+all_zips <- merge(all_zips,fips_data,by="state")
+# 
+# 
+zip_county <- fread("C:/Users/e3dxr03/Downloads/ZIP_COUNTY_092020.csv")
+setorder(zip_county,ZIP,-RES_RATIO)
+zip_county <- zip_county[!duplicated(zip_county[,c("ZIP")]),c("ZIP","COUNTY")]
+zip_county[,ZIP:=str_pad(ZIP,5,"left","0")]
+zip_county[,COUNTY:=str_pad(COUNTY,5,"left","0")]
+
+all_zips <- merge(all_zips,zip_county,by.x="zipcode",by.y="ZIP")
+all_zips <- merge(all_zips,cbsa_county,by.x="COUNTY",by.y="countyfips",all.x=T)
+all_zips[,dummy:=1]
+# 
+all_banks <- data.table(RSSDID = unique(branch_year$RSSDID))
+all_banks[,dummy:=1]
+bank_zip <- all_banks[all_zips, on = .(dummy=dummy),allow.cartesian = T]
+gc()
+setkey(bank_zip,RSSDID,state_code)
+
+bank_zip <- merge(bank_zip,state_presence_prev,by.x=c("RSSDID","state_code"),by.y=c("RSSDID","state"))
+gc()
+
+bank_zip <- merge(bank_zip,cbsa_presence_prev,by.x=c("RSSDID","cbsacode","yr_prev"),by.y=c("RSSDID","cbsacode","yr_prev"),all.x=T)
+bank_zip[,cbsa_presence_prev:=ifelse(is.na(cbsa_presence_prev),0,cbsa_presence_prev)]
+gc()
+bank_zip <- bank_zip[yr_prev>=1999] # & state_presence_prev==1
+gc()
+
+setnames(bank_zip,"yr_prev","yr")
+setkey(bank_zip,RSSDID,yr,zipcode)
+gc()
+```
+
+```{r}
+# new banches, bank-zip-yr
+bank_zip_year <- open_data[yr %in% c(1995:2024) & !RSSDID %in% exclude_2011,
+                           .(new_branch_zip = max(new_branch),
+                             no_of_branches_bank_zip = .N),
+                               by=.(RSSDID,zip,yr)]
+
+
+bank_zip  <- merge(bank_zip,bank_zip_year[,c("RSSDID","yr","zip","new_branch_zip")],
+                   by.x=c("RSSDID","yr","zipcode"),
+                   by.y=c("RSSDID","yr","zip"),
+                   all.x=T)
+bank_zip[,new_branch_zip:=ifelse(is.na(new_branch_zip),0,new_branch_zip)]
+bank_zip <- bank_zip[!is.na(cbsacode)]
+gc()
+
+
+# identify cbsas where there is a new branch opening
+new_branch_zip_df <- bank_zip[new_branch_zip==1]
+new_branch_zip_df <- new_branch_zip_df[,c("RSSDID","yr","cbsacode")]
+new_branch_zip_df <- new_branch_zip_df[!is.na(cbsacode)]
+new_branch_zip_df[,new_cbsa_entry:=1]
+new_branch_zip_df <- new_branch_zip_df[!duplicated(new_branch_zip_df[,c("RSSDID","yr","cbsacode")])]
+
+bank_zip <- merge(bank_zip,new_branch_zip_df,by=c("RSSDID","yr","cbsacode"),all.x=T)
+
+
+# merging number of branches in prev year
+bank_zip_branches <- branch_year[,.(no_branches_prev_yr=.N),by=.(RSSDID,yr,zip)]
+bank_zip_branches[,yr:=yr+1]
+
+bank_zip <- merge(bank_zip,bank_zip_branches,by.x=c("RSSDID","yr","zipcode"),by.y=c("RSSDID","yr","zip"),all.x=T)
+bank_zip[,no_branches_prev_yr:=ifelse(is.na(no_branches_prev_yr),0,no_branches_prev_yr)]
+gc()
+
+# restrict zip codes where there is a new branch this year or cbsa precens previous year and no branches in prev year 
+bank_zip_reg_cbsa <- bank_zip[(cbsa_presence_prev==1 | new_branch_zip==1 | new_cbsa_entry==1) & no_branches_prev_yr==0 ]
+
+rm(bank_zip)
+gc()
+```
+
+```{r}
+cbsa_no_branch_zips <- copy(bank_zip_reg_cbsa)
+rm(bank_zip_reg_cbsa)
+rm(list=c("all_banks","all_zips","bank_zip_branches","bank_zip_year"))
+gc()
+```
+
+
+
+
+# County-level Control Variables
+```{r}
+#| eval: true
+# SELECT county_code,loan_amount,state_code,year FROM hmda.view_lar_hmda WHERE (view_lar_hmda.action_type IN ('1'))
+# hmda <- fread("../data/hmda121259461740765302.csv.bz2")
+# hmda <- hmda[year>=1996]
+# hmda <- hmda[state_code>0 & county_code>0]
+# hmda[,county_code:=paste0(str_pad(state_code,2,"left","0"),str_pad(county_code,3,"left","0"))]
+# hmda <- hmda[,.(total_mortgage_amt=sum(loan_amount,na.rm=T)),by=.(county_code,year)]
+# hmda_county <- hmda %>%
+#                 arrange(county_code,year) %>%
+#                 group_by(county_code) %>%
+#                 mutate(
+#                   lag_total_mortgage_amt = lag(total_mortgage_amt,3),
+#                   hmda_mtg_amt_gr = (total_mortgage_amt-lag_total_mortgage_amt)/lag_total_mortgage_amt,
+#                   lag_hmda_mtg_amt_gr = lag(hmda_mtg_amt_gr/3)
+#                 ) %>% ungroup() %>% data.table %>%
+#                 select(county_code,year,lag_hmda_mtg_amt_gr)
+# saveRDS(hmda_county,file="../data/hmda_county_loan_gr.rds")
+hmda_county <- readRDS("../data/hmda_county_loan_gr.rds")
+
+
+
+cra <- lapply(list.files(path="../data/cra-aggr/",pattern = "\\.rds$",full.names = T),readRDS)
+cra <- rbindlist(cra,fill=T)
+setnames(cra,"Activity_Year","year")
+cra <- cra %>%
+  group_by(county_code) %>%
+  arrange(county_code,year) %>%
+  mutate(
+    lag_loan_amount_amt_lt_1m = lag(loan_amount_amt_lt_1m,3),
+    cra_loan_amount_amt_lt_1m_gr = (loan_amount_amt_lt_1m-lag_loan_amount_amt_lt_1m)/lag_loan_amount_amt_lt_1m,
+    lag_cra_loan_amount_amt_lt_1m_gr = lag(cra_loan_amount_amt_lt_1m_gr/3)
+  ) %>% ungroup() %>% data.table %>%
+  select(county_code,year,lag_cra_loan_amount_amt_lt_1m_gr)
+cra <- cra[!is.na(lag_cra_loan_amount_amt_lt_1m_gr)]
+
+
+
+# cbp
+cbp <- lapply(list.files(path="../data/cbp/",pattern = "\\.rds$",full.names = T),readRDS)
+cbp <- rbindlist(cbp,fill=T)
+setnames(cbp,c("Year","county"),c("year","county_code"))
+cbp <- cbp %>%
+  group_by(county_code) %>%
+  arrange(county_code,year) %>%
+  mutate(
+    lag_EST = lag(EST,3),
+    lag_AP = lag(AP,3),
+    establishment_gr = (EST-lag_EST)/lag_EST,
+    payroll_gr = (AP-lag_AP)/lag_AP,
+    lag_establishment_gr = lag(establishment_gr/3),
+    lag_payroll_gr = lag(payroll_gr/3)
+  ) %>% ungroup() %>% data.table %>%
+  select(county_code,year,lag_establishment_gr,lag_payroll_gr)
+cbp <- cbp[!is.na(lag_establishment_gr)]
+
+temp <- cbp[year==2022]
+temp[,year:=2023]
+cbp <- rbind(cbp,temp)
+
+temp <- cbp[year==2002]
+temp[,year:=2001]
+cbp <- rbind(cbp,temp)
+
+
+
+
+county_population_density <- readRDS('../data/county_population_density.rds')
+
+
+
+
+county_depositsdf <- branch_year[,.(county_deposits=sum(DEPSUMBR,na.rm=T)),by=.(STCNTYBR,yr)]
+
+
+county_depositsdf <- county_depositsdf %>% 
+                      arrange(STCNTYBR,yr) %>%
+                      group_by(STCNTYBR) %>%
+                      mutate(
+                        county_deposits = county_deposits,  # this will be lagged later when merging by adding +1 to year
+                        county_deposits_lag3 = lag(county_deposits,3),
+                        county_deposit_gr = (county_deposits-county_deposits_lag3)/county_deposits_lag3,
+                        lag_county_deposit_gr = lag(county_deposit_gr)/3
+                      ) %>%
+                      select(STCNTYBR,yr,lag_county_deposit_gr) %>%
+                      ungroup() %>% data.table()
+
+# county-level deposit hhi
+hhi <- branch_year[,c("DEPSUMBR","STCNTYBR","yr")]
+hhi[,sum_deposits:=sum(DEPSUMBR),by=.(STCNTYBR,yr)]
+hhi[,mkt_share:=DEPSUMBR/sum_deposits]
+hhi[,mkt_share:=mkt_share*mkt_share]
+hhi <- hhi[,.(county_deposit_hhi=sum(mkt_share)+0.01),by=.(STCNTYBR,yr)]
+
+hhi <- hhi %>%
+  group_by(STCNTYBR) %>%
+  arrange(STCNTYBR,yr) %>%
+  mutate(
+    lag_county_deposit_hhi = lag(county_deposit_hhi)
+  ) %>%
+  ungroup() %>%
+  select(STCNTYBR,yr,lag_county_deposit_hhi) %>%
+  data.table
+
+county_hhi <- hhi[!is.na(lag_county_deposit_hhi)]
+
+
+# county-level mean lmi
+# https://www.fhfa.gov/data/underserved-areas-data
+lmi_files <- list.files(path="../data/lya/",full.names = T)
+lmi <- list()
+
+for(f in lmi_files) {
+  temp <- fread(f,select = c("STATE","CNTY","TRACT","LYA"))
+  temp[,yr:=as.numeric(str_extract(f,"\\d{4}"))]
+  lmi[[f]] <- temp
+}
+lmi <- rbindlist(lmi)
+lmi[,county:=paste0(str_pad(STATE,2,"left","0"),str_pad(CNTY,3,"left","0"))]
+lmi[,c("STATE","CNTY"):=list(NULL)]
+lmi[,LYA:=ifelse(LYA==9,0,LYA)]
+
+lmi <- lmi[,.(lmi=mean(LYA,na.rm=T)),by=.(county,yr)]
+
+temp1 <- lmi[yr==2013]
+for(y in 2000:2012) {
+  temp <- copy(temp1)
+  temp[,yr:=y]
+  lmi <- rbind(lmi,temp)
+}
+
+
+# county gdp
+county_gdp <- readRDS('../data/county_yr_gdp_gr.rds')
+temp <- county_gdp[year==2022]
+temp[,year:=2023]
+county_gdp <- rbind(county_gdp,temp)
+setnames(county_gdp,"county_gdp_gr","lag_county_gdp_gr")
+```
+
+
+
+```{r}
+#| eval: true
+county_control_df <- merge(hmda_county,county_gdp,by.x=c("county_code","year"),by.y=c("county_code","year"),all.x=T)
+county_control_df <- merge(county_control_df,cra,by.x=c("county_code","year"),by.y=c("county_code","year"),all.x=T)
+county_control_df <- merge(county_control_df,county_population_density,by.x=c("county_code","year"),by.y=c("county","yr"))
+county_control_df <- merge(county_control_df,county_depositsdf,by.x=c("county_code","year"),by.y=c("STCNTYBR","yr"))
+county_control_df <- merge(county_control_df,county_hhi,by.x=c("county_code","year"),by.y=c("STCNTYBR","yr"))
+county_control_df <- merge(county_control_df,lmi,by.x=c("county_code","year"),by.y=c("county","yr"))
+county_control_df <- merge(county_control_df,cbp,by.x=c("county_code","year"),by.y=c("county_code","year"))
+
+control_vars <- c("lag_hmda_mtg_amt_gr","lag_county_gdp_gr","lag_cra_loan_amount_amt_lt_1m_gr","population_density","lag_county_deposit_gr","lmi","lag_establishment_gr","lag_payroll_gr")
+
+county_control_df[,(control_vars):=lapply(.SD, function(x) Winsorize(x, quantile(x, probs=c(0.025, 0.975), na.rm = TRUE))),by=year,.SDcols = control_vars]
+
+county_control_df <- county_control_df[!duplicated(county_control_df[,.(county_code,year)])]
+```
+
+
+# Zip-Demo Data
+```{r}
+#| eval: true
+# states <- c("AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA",
+#             "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+#             "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+#             "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+#             "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY")
+# 
+# # Variables to retrieve
+# acs_vars <- c(
+#   median_income = "B19013_001",          # Median household income
+#   pct_college_educated = "B23006_023",   # Bachelor's degree (age 25+)
+#   total_education = "B23006_001",# Total population 25+
+#   median_age = "B01002_001",             # Median age
+#   white_population = "B02001_002",       # White alone population
+#   total_population = "B01003_001"        # Total population
+# )
+# 
+# # Initialize an empty list to hold the data for each state
+# all_states_data <- list()
+# 
+# # Loop through each state to get ACS data at the tract level
+# for(yr in seq(2010,2022,by=3)) {
+#   for (state in states) {
+#     state_yr <-paste(state,yr)
+#     message("Getting data for state: ", state_yr)
+# 
+#     # Get the ACS data for the state at the tract level
+#     state_data <- get_acs(
+#       geography = "tract",
+#       variables = acs_vars,
+#       state = state,
+#       year = yr,
+#       survey = "acs5",
+#       output = "wide"
+#     )
+# 
+#     state_data <- data.table(state_data)
+#     state_data[,yr:=yr]
+# 
+#     # Store the data for the state
+#     all_states_data[[state_yr]] <- state_data
+#   }
+# }
+# 
+# acs_data_combined <- bind_rows(all_states_data)
+# 
+# acs_data <- acs_data_combined %>%
+#   mutate(
+#     pct_college_educated = 100 * (pct_college_educatedE / total_educationE),  # Bachelor's degree holders as a percentage of 25+ population
+#     white_population_pct = 100 * (white_populationE / total_populationE),   # White population as a percentage of total population
+#     median_income = median_incomeE,
+#     median_age = median_ageE
+#   ) %>%
+#   select(yr,GEOID, median_income, pct_college_educated, median_age, white_population_pct) %>%
+#   rename(
+#     tract = GEOID
+#   )
+# 
+# saveRDS(acs_data,"data/acs_data_2010_2022_tract.rds")
+# 
+# 
+# acs_data <- readRDS("../data/acs_data_2010_2022_tract.rds")
+# 
+# tract_zip_crosswalk <- fread('../data/ZIP_TRACT_032019.csv')
+# tract_zip_crosswalk[,zip:=str_pad(zip,5,"left","0")]
+# tract_zip_crosswalk[,tract:=as.character(tract)]
+# tract_zip_crosswalk[,tract:=str_pad(tract,11,"left","0")]
+# 
+# 
+# acs_with_zip <- acs_data %>%
+#   left_join(tract_zip_crosswalk[,c("zip","tract","tot_ratio")], by = c("tract" = "tract"))
+# 
+# 
+# 
+# zip_aggregated_data <- acs_with_zip %>%
+#   group_by(zip,yr) %>%
+#   summarize(
+#     # Weighted average of median income
+#     median_income = sum(median_income * tot_ratio, na.rm = T) ,
+# 
+#     # Weighted average of percentage of population with a bachelor's degree
+#     pct_college_educated = sum(pct_college_educated * tot_ratio, na.rm=T),
+# 
+#     # Weighted average of white population percentage
+#     # white_population_pct = sum(white_populationE * RES_RATIO,na.rm=T),
+# 
+#     # Weighted average of median age
+#     median_age = sum(median_age * tot_ratio,na.rm = T)
+# 
+#     # Total population is weighted by RES_RATIO
+#     # total_population = sum(total_populationE * RES_RATIO)
+#   )
+# 
+# 
+# 
+# 
+# 
+# irs_data <- list()
+# 
+# for(yr in seq(2010,2021,by=1)) {
+# 
+#   print(yr)
+# 
+#   irs <-fread(paste0("../data/irs/",substr(yr,3,4),"zpallagi.csv"))  #no_returns,no_returns_salaries,no_returns_dividend,no_returns_business,no_returns_captial_gain
+#   names(irs) <- tolower(names(irs))
+#   irs <- irs[,c("zipcode","n1","n00200","n00600","n00900","n01000")]
+#   setnames(irs,
+#            c("n1","n00200","n00600","n00900","n01000"),
+#            c("no_returns","no_returns_salaries","no_returns_dividend","no_returns_business","no_returns_captial_gain"))
+# 
+#   irs <- irs[, lapply(.SD, function(x) sum(x, na.rm = TRUE)), by = zipcode]
+# 
+# 
+#   irs[,salary_frac:=no_returns_salaries/no_returns]
+#   irs[,dividend_frac:=no_returns_dividend/no_returns]
+#   irs[,business_frac:=no_returns_business/no_returns]
+#   irs[,capital_gain_frac:=no_returns_captial_gain/no_returns]
+# 
+#   irs <- irs[,c("zipcode","dividend_frac","capital_gain_frac")]
+#   irs[,yr:=yr]
+# 
+#   irs_data[[paste0(yr,"_")]] <- copy(irs)
+# }
+# 
+# irs[,yr:=2022]
+# irs_data[['2022_']] <- copy(irs)
+# 
+# irs_data <- bind_rows(irs_data)
+# 
+# 
+# irs_data <- irs_data[,c("zipcode","yr","dividend_frac","capital_gain_frac")]
+# irs_data[,zipcode:=str_pad(zipcode,5,"left","0")]
+# 
+# zip_demo_data <- merge(zip_aggregated_data,irs_data,by.x=c("zip","yr"),by.y=c("zipcode","yr"),all.x=T)
+# 
+# 
+# key_chars <- c("median_income","median_age","pct_college_educated","capital_gain_frac","dividend_frac")
+# 
+# zip_demo_data <- data.table(zip_demo_data)
+# zip_demo_data[,paste0(key_chars,"_q"):=lapply(.SD, function(x) ntile(x,2)),by=yr,.SDcols = key_chars]
+# 
+# zip_demo_data[,sophisticated:=ifelse(!is.na(dividend_frac) & median_income_q==2 & pct_college_educated_q==2 & (dividend_frac_q==2 | capital_gain_frac_q==2),1,
+#                                      ifelse(!is.na(dividend_frac),0,NA))]
+# 
+# zip_demo_data[,sophisticated_ed_sm:=ifelse(!is.na(dividend_frac)  & pct_college_educated_q==2 & (dividend_frac_q==2 | capital_gain_frac_q==2),1,
+#                                      ifelse(!is.na(dividend_frac),0,NA))]
+# 
+# zip_demo_data[,sophisticated_acs_only:=ifelse( median_income_q==2 & pct_college_educated_q==2 ,1,0)]
+# 
+# zip_demo_data <- zip_demo_data[,c("zip","yr","median_income","median_age","pct_college_educated","capital_gain_frac","dividend_frac","sophisticated","sophisticated_acs_only","sophisticated_ed_sm")]
+# 
+# saveRDS(zip_demo_data,"../data/zip_demo_data.rds")
+
+zip_demo_data <- readRDS("../data/zip_demo_data.rds")  #setup-zipcode-level-analytic-sample-v7.0.qmd
+zip_demo_data[,age_bin:=ntile(median_age,4),by=yr]
+
+temp1 <- zip_demo_data[yr==2010]
+for(y in 2000:2009) {
+  temp <- copy(temp1)
+  temp[,yr:=y]
+  zip_demo_data <- rbind(zip_demo_data,temp)
+}
+
+temp1 <- zip_demo_data[yr==2022]
+for(y in 2023:2024) {
+  temp <- copy(temp1)
+  temp[,yr:=y]
+  zip_demo_data <- rbind(zip_demo_data,temp)
+}
+
+
+```
+
+
+
+```{r}
+cbsa_no_branch_zips <- merge(cbsa_no_branch_zips,zip_demo_data,by.x=c("zipcode","yr"),by.y=c("zip","yr"))
+cbsa_no_branch_zips[,bank_year:=paste(RSSDID,yr)]
+cbsa_no_branch_zips[,county_year:=paste(COUNTY,yr)]
+cbsa_no_branch_zips[,state_year:=paste(state_code,yr)]
+setkey(cbsa_no_branch_zips,yr)
+
+cbsa_no_branch_zips <- merge(cbsa_no_branch_zips,county_control_df,by.x=c("COUNTY","yr"),by.y=c("county_code","year"),all.x=T)
+
+cbsa_no_branch_zips[,family_income:=median_income]
+cbsa_no_branch_zips[,college_frac:=pct_college_educated/100]
+cbsa_no_branch_zips <- cbsa_no_branch_zips[family_income>0]
+```
+
+# Bank-level Data
+
+```{r}
+#| eval: true
+
+# bank-level HHI
+#DSS2021 p1136
+hhi <- branch_year[,.(deposits = sum(DEPSUMBR,na.rm=T)),by=.(RSSDID,STCNTYBR,yr)]
+hhi[,total_deposits:=sum(deposits,na.rm = T),by=.(STCNTYBR,yr)]
+hhi[,deposit_share:=deposits/total_deposits]
+hhi[,deposit_share:=deposit_share*deposit_share]
+hhi <- hhi[,.(deposits_state_hhi=sum(deposit_share)),by=.(STCNTYBR,yr)]
+
+
+bank_hhi <- branch_year[,c("RSSDID","DEPSUMBR","STCNTYBR","yr")]
+bank_hhi <- bank_hhi[,.(bank_county_deposits=sum(DEPSUMBR)),by=.(yr,STCNTYBR,RSSDID)]
+bank_hhi[,bank_deposits:=sum(bank_county_deposits),by=.(yr,RSSDID)]
+bank_hhi[,deposits_share:=bank_county_deposits/bank_deposits]
+bank_hhi <- merge(bank_hhi,hhi,by=c("STCNTYBR","yr"))
+
+bank_hhi[,w_hhi:=deposits_share*deposits_state_hhi]
+
+hhi_bank_level <- bank_hhi[,.(bank_hhi=sum(w_hhi)),by=.(RSSDID,yr)]
+hhi_bank_level <- merge(hhi_bank_level,bank_chars[,c("RSSDID","YEAR")],
+                        by.x=c("RSSDID","yr"),
+                        by.y=c("RSSDID","YEAR"))
+
+hhi_bank_level <- hhi_bank_level[yr>=1999]
+
+
+call_reports <- readRDS('../data/call_reports_08222025.rds')
+
+call_reports <- call_reports[,.(yr,ID_RSSD,trans_accts_frac_assets,ci_assets,bank_assets,uninsured_deposits_frac)]
+setorder(call_reports,ID_RSSD,yr)
+call_reports[,uninsured_deposits_frac:=nafill(uninsured_deposits_frac,type="nocb"),by=ID_RSSD]
+
+temp <- merge(hhi_bank_level,call_reports,by.x=c("RSSDID","yr"),by.y=c("ID_RSSD","yr"),all.x=T)
+temp <- temp[!is.na(bank_assets)]
+
+bank_level_data <- copy(temp)
+
+cbsa_no_branch_zips <-  merge(cbsa_no_branch_zips,bank_level_data,by.x=c("RSSDID","yr"),by.y=c("RSSDID","yr")) 
+```
+
+
+```{r}
+zip_deposits_amount <- branch_year[,.(zip_dep_amount=sum(DEPSUMBR,na.rm=T)),by=.(zip,yr)]
+
+candidate_zips_for_branch_openings <- unique(branch_year$zip)
+
+cbsa_no_branch_zips <- cbsa_no_branch_zips[zipcode %in% candidate_zips_for_branch_openings]
+cbsa_no_branch_zips <- merge(cbsa_no_branch_zips,zip_deposits_amount,by.x=c("yr","zipcode"),by.y=c("yr","zip"),all.x=T)
+cbsa_no_branch_zips[,zip_dep_amount:=ifelse(zip_dep_amount==0 | is.na(zip_dep_amount),1,zip_dep_amount)]
+cbsa_no_branch_zips[,log_deposits:=log(1+zip_dep_amount)]
+
+cbsa_no_branch_zips[,factor_age_bin:=factor(age_bin)]
+
+```
+
+
+
+```{r}
+hmda_bank_county_yr <- readRDS("C:/Users/e3dxr03/OneDrive - FR Banks/Projects/deposit-franchise-bank-branches/data/hmda_bank_county_yr.rds") 
+# C:\Users\e3dxr03\OneDrive - FR Banks\Projects\Utilities\HMDA-Avery-Link.qmd
+temp <- hmda_bank_county_yr[year==2004]
+for(y in 2000:2003) {
+  temp[,year:=y]
+  hmda_bank_county_yr <- rbind(hmda_bank_county_yr,temp)
+}
+hmda_county_yr <- hmda_bank_county_yr[,.(county_mortgage_volume=sum(bank_county_mortgage_volume,na.rm=T)),by=.(county_code,year)]
+hmda_county_yr <- hmda_county_yr %>%
+                       arrange(county_code,year) %>%
+                       group_by(county_code) %>%
+                       mutate(
+                         lag_county_mortgage_volume = lag(county_mortgage_volume,1)
+                       ) %>% 
+                       select(-county_mortgage_volume) %>% ungroup() %>% data.table()
+
+cbsa_no_branch_zips <- merge(cbsa_no_branch_zips,hmda_county_yr,by.x=c("yr","COUNTY"),by.y=c("year","county_code"),all.x=T)
+cbsa_no_branch_zips[,lag_county_mortgage_volume:=ifelse(is.na(lag_county_mortgage_volume) & RSSDID %in% hmda_county_yr$RSSD,0,lag_county_mortgage_volume)]
+cbsa_no_branch_zips[,lag_county_mortgage_volume:=lag_county_mortgage_volume+1]
+
+
+
+cra_bank_county_yr <- readRDS("C:/Users/e3dxr03/OneDrive - FR Banks/Projects/deposit-franchise-bank-branches/data/cra_bank_county_yr.rds") 
+# C:\Users\e3dxr03\OneDrive - FR Banks\Projects\Utilities\CRA-bank-county-year.qmd
+temp <- cra_bank_county_yr[year==2004]
+for(y in 2000:2003) {
+  temp[,year:=y]
+  cra_bank_county_yr <- rbind(cra_bank_county_yr,temp)
+}
+cra_county_yr <- cra_bank_county_yr[,.(county_cra_volume=sum(loan_amt,na.rm=T)),by=.(county_code,year)]
+cra_county_yr <- cra_county_yr %>%
+                       arrange(county_code,year) %>%
+                       group_by(county_code) %>%
+                       mutate(
+                         lag_county_cra_volume = lag(county_cra_volume,1)
+                       ) %>% 
+                       select(-county_cra_volume) %>% ungroup() %>% data.table()
+
+cbsa_no_branch_zips <- merge(cbsa_no_branch_zips,cra_county_yr,by.x=c("yr","COUNTY"),by.y=c("year","county_code"),all.x=T)
+cbsa_no_branch_zips[,lag_county_cra_volume:=ifelse(is.na(lag_county_cra_volume) & RSSDID %in% cra_county_yr$RSSD,0,lag_county_cra_volume)]
+cbsa_no_branch_zips[,lag_county_cra_volume:=lag_county_cra_volume+1]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+cbsa_no_branch_zips[,c("dummy","state","state_presence_prev","cbsa_presence_prev","sophisticated_acs_only","sophisticated_ed_sm"):=list(NULL)]
+
+saveRDS(cbsa_no_branch_zips,"bank_zip_cbsa_presence_new_entry.rds")
+```
+
+
+
+
+
+
