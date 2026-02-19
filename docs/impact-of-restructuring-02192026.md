@@ -41,12 +41,39 @@ Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
 
 We test whether areas that experience branch closures or net branch reductions see declines in mortgage origination (HMDA) or small-business lending (CRA), particularly for lower-income or underserved borrowers—addressing **editor comment 3**, **referee comment 1** (broader implications, downstream credit outcomes), and **referee comment 3** (who is hurt or helped by restructuring).
 
-**Design.** The unit of observation is **county–year**. We build a county–year panel from the branch-level sample (`branch_closure_analysis_sample_02172026.rds`): at each county–year we compute the fraction of branches closed and the fraction of new branches (same definitions as in the ZIP deposit reallocation analysis). County–year mortgage volume is the sum of bank–county HMDA originations; CRA volume is the sum of bank–county CRA small-business loan amounts. Outcomes are one-year growth rates in mortgage and CRA volume (`gr_mortgage_1yr`, `gr_cra_1yr`). Regressions include county and year fixed effects, three-year pre-trend in county deposits (`county_growth_3yr`), and log lagged branch count; standard errors are clustered by county. Subperiods (2000–2007, 2008–2011, 2012–2019, 2020–2024) mirror the deposit reallocation table for comparability.
+**Design.** The unit of observation is **county–year**. We build a county–year panel from the branch-level sample (`branch_closure_analysis_sample_02172026.rds`): at each county–year we compute the fraction of branches closed and the fraction of new branches (same definitions as in the ZIP deposit reallocation analysis). County–year mortgage volume is the sum of bank–county HMDA originations; CRA volume is the sum of bank–county CRA small-business loan amounts. Outcomes are one-year growth rates in mortgage and CRA volume (`gr_mortgage_1yr`, `gr_cra_1yr`). Regressions include county and year fixed effects, three-year pre-trend in county deposits (`county_growth_3yr`), and log lagged branch count; standard errors are clustered by county. The script also produces baseline results by subperiod (2000–2007, 2008–2011, 2012–2019, 2020–2024) in separate tables.
 
-**Baseline results (Tables A and B).** Run `code/analysis/closure_credit_impacts_02192026.qmd` to produce the tables; they are also written to `tables/closure_credit_mortgage_02192026.txt` and `tables/closure_credit_cra_02192026.txt`. The coefficients on `fraction_of_branches_closed` and `fraction_of_new_branches` show whether county-level mortgage and CRA lending growth respond to branch restructuring. Negative coefficients on closures would indicate that areas losing branches see slower credit growth; positive coefficients on openings would indicate that new branches are associated with faster local credit growth (or vice versa depending on specification). Even null or small effects are informative, as they clarify which margins branch closures do and do not operate through (editor/referee).
+**Heterogeneity by income and LMI (table below).** The table reports baseline specifications (no interaction) and specifications that interact both the closure share and the opening share with (i) low-income county (below median county income) and (ii) **population-weighted LMI** (`pop_w_lmi`): the share of county population in FHFA low-income tracts (above median = high-LMI county). The sample is county–years with year ≥ 2004, excluding 2008–2011 (GFC) and 2020 (pandemic) so that estimates reflect normal-cycle variation. Columns shown here are: mortgage baseline, mortgage × LMI (pop_w_lmi), CRA baseline, CRA × LMI (pop_w_lmi). This speaks directly to “who is hurt”: the interaction terms show whether effects of closures and openings on lending differ in lower-income or high-LMI counties. For example, in the mortgage × LMI column, the negative coefficient on *fraction_of_branches_closed × pop_w_lmi* indicates that the adverse association between closures and mortgage growth is stronger in high-LMI counties; the CRA × LMI column shows a positive interaction of *fraction_of_new_branches × pop_w_lmi* for CRA lending (new branches associated with higher CRA growth in high-LMI counties).
 
-**Heterogeneity by income and LMI (Table C).** The same script estimates interactions of the closure share with (i) low-income county indicator (below median county income) and (ii) high LMI share where available. This speaks directly to “who is hurt”: if closure effects on lending are larger in lower-income or high-LMI counties, restructuring disproportionately affects underserved borrowers. Heterogeneity tables are written to `tables/closure_credit_mortgage_heterogeneity_02192026.txt` and `tables/closure_credit_cra_heterogeneity_02192026.txt`.
 
-**Link to comments.**  
-- **Editor 3 / Referee 1:** The county–year credit regressions quantify whether branch closures translate into reduced local mortgage and small-business lending, complementing the deposit reallocation evidence in Section 1.  
-- **Referee 3:** Heterogeneity by income and LMI addresses who is hurt or helped and allows discussion of whether credit-side impacts are driven by income/wealth versus other demographic factors.
+```
+                                         Mtg (baseline)      Mtg × LMI CRA (bas.. CRA × LMI
+Dependent Var.:                         gr_mortgage_1yr gr_mortgage_1yr gr_cra_1yr gr_cra_1yr
+                                                                                             
+fraction_of_branches_closed                  -0.0161          0.0425    -0.0093    -0.0518   
+                                             (0.0229)        (0.0332)   (0.0523)   (0.0747)  
+fraction_of_new_branches                      0.0857***       0.0996*** -0.0372    -0.1162** 
+                                             (0.0205)        (0.0292)   (0.0420)   (0.0586)  
+log1p(branches_county_lag1)                   0.0255***       0.0245*** -0.0367**  -0.0366** 
+                                             (0.0073)        (0.0073)   (0.0144)   (0.0145)  
+county_growth_3yr                            -0.0008         -0.0007    -0.0040*   -0.0040*  
+                                             (0.0009)        (0.0009)   (0.0022)   (0.0023)  
+log1p(total_deps_county_lag1)                -0.0434***      -0.0421*** -0.0465*** -0.0466***
+                                             (0.0051)        (0.0051)   (0.0096)   (0.0095)  
+pop_w_lmi                                                     0.0059               -0.0341*  
+                                                             (0.0084)              (0.0185)  
+fraction_of_branches_closed x pop_w_lmi                      -0.2689**              0.1771   
+                                                             (0.1294)              (0.2411)  
+fraction_of_new_branches x pop_w_lmi                         -0.0763                0.4100*  
+                                                             (0.0949)              (0.2133)  
+Fixed-Effects:                          --------------- --------------- ---------- ----------
+county_code                                         Yes             Yes        Yes        Yes
+year                                                Yes             Yes        Yes        Yes
+_______________________________________ _______________ _______________ __________ __________
+S.E.: Clustered                         by: county_code by: county_code by: coun.. by: coun..
+Observations                                     41,726          41,617     41,726     41,617
+R2                                              0.53042         0.53113    0.10852    0.10864
+Within R2                                       0.00253         0.00267    0.00122    0.00146
+---
+Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
+```

@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>impact-of-restructuring-02192026.md</title>
+<meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+
+<style>
+/* https://github.com/microsoft/vscode/blob/master/extensions/markdown-language-features/media/markdown.css */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+body {
+	font-family: var(--vscode-markdown-font-family, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif);
+	font-size: var(--vscode-markdown-font-size, 14px);
+	padding: 0 26px;
+	line-height: var(--vscode-markdown-line-height, 22px);
+	word-wrap: break-word;
+}
+
+#code-csp-warning {
+	position: fixed;
+	top: 0;
+	right: 0;
+	color: white;
+	margin: 16px;
+	text-align: center;
+	font-size: 12px;
+	font-family: sans-serif;
+	background-color:#444444;
+	cursor: pointer;
+	padding: 6px;
+	box-shadow: 1px 1px 1px rgba(0,0,0,.25);
+}
+
+#code-csp-warning:hover {
+	text-decoration: none;
+	background-color:#007acc;
+	box-shadow: 2px 2px 2px rgba(0,0,0,.25);
+}
+
+body.scrollBeyondLastLine {
+	margin-bottom: calc(100vh - 22px);
+}
+
+body.showEditorSelection .code-line {
+	position: relative;
+}
+
+body.showEditorSelection .code-active-line:before,
+body.showEditorSelection .code-line:hover:before {
+	content: "";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: -12px;
+	height: 100%;
+}
+
+body.showEditorSelection li.code-active-line:before,
+body.showEditorSelection li.code-line:hover:before {
+	left: -30px;
+}
+
+.vscode-light.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.15);
+}
+
+.vscode-light.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(0, 0, 0, 0.40);
+}
+
+.vscode-light.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-dark.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.4);
+}
+
+.vscode-dark.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 255, 255, 0.60);
+}
+
+.vscode-dark.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+.vscode-high-contrast.showEditorSelection .code-active-line:before {
+	border-left: 3px solid rgba(255, 160, 0, 0.7);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line:hover:before {
+	border-left: 3px solid rgba(255, 160, 0, 1);
+}
+
+.vscode-high-contrast.showEditorSelection .code-line .code-line:hover:before {
+	border-left: none;
+}
+
+img {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+a {
+	text-decoration: none;
+}
+
+a:hover {
+	text-decoration: underline;
+}
+
+a:focus,
+input:focus,
+select:focus,
+textarea:focus {
+	outline: 1px solid -webkit-focus-ring-color;
+	outline-offset: -1px;
+}
+
+hr {
+	border: 0;
+	height: 2px;
+	border-bottom: 2px solid;
+}
+
+h1 {
+	padding-bottom: 0.3em;
+	line-height: 1.2;
+	border-bottom-width: 1px;
+	border-bottom-style: solid;
+}
+
+h1, h2, h3 {
+	font-weight: normal;
+}
+
+table {
+	border-collapse: collapse;
+}
+
+table > thead > tr > th {
+	text-align: left;
+	border-bottom: 1px solid;
+}
+
+table > thead > tr > th,
+table > thead > tr > td,
+table > tbody > tr > th,
+table > tbody > tr > td {
+	padding: 5px 10px;
+}
+
+table > tbody > tr + tr > td {
+	border-top: 1px solid;
+}
+
+blockquote {
+	margin: 0 7px 0 5px;
+	padding: 0 16px 0 10px;
+	border-left-width: 5px;
+	border-left-style: solid;
+}
+
+code {
+	font-family: Menlo, Monaco, Consolas, "Droid Sans Mono", "Courier New", monospace, "Droid Sans Fallback";
+	font-size: 1em;
+	line-height: 1.357em;
+}
+
+body.wordWrap pre {
+	white-space: pre-wrap;
+}
+
+pre:not(.hljs),
+pre.hljs code > div {
+	padding: 16px;
+	border-radius: 3px;
+	overflow: auto;
+}
+
+pre code {
+	color: var(--vscode-editor-foreground);
+	tab-size: 4;
+}
+
+/** Theming */
+
+.vscode-light pre {
+	background-color: rgba(220, 220, 220, 0.4);
+}
+
+.vscode-dark pre {
+	background-color: rgba(10, 10, 10, 0.4);
+}
+
+.vscode-high-contrast pre {
+	background-color: rgb(0, 0, 0);
+}
+
+.vscode-high-contrast h1 {
+	border-color: rgb(0, 0, 0);
+}
+
+.vscode-light table > thead > tr > th {
+	border-color: rgba(0, 0, 0, 0.69);
+}
+
+.vscode-dark table > thead > tr > th {
+	border-color: rgba(255, 255, 255, 0.69);
+}
+
+.vscode-light h1,
+.vscode-light hr,
+.vscode-light table > tbody > tr + tr > td {
+	border-color: rgba(0, 0, 0, 0.18);
+}
+
+.vscode-dark h1,
+.vscode-dark hr,
+.vscode-dark table > tbody > tr + tr > td {
+	border-color: rgba(255, 255, 255, 0.18);
+}
+
+</style>
+
+<style>
+/* Tomorrow Theme */
+/* http://jmblog.github.com/color-themes-for-google-code-highlightjs */
+/* Original theme - https://github.com/chriskempson/tomorrow-theme */
+
+/* Tomorrow Comment */
+.hljs-comment,
+.hljs-quote {
+	color: #8e908c;
+}
+
+/* Tomorrow Red */
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+	color: #c82829;
+}
+
+/* Tomorrow Orange */
+.hljs-number,
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-literal,
+.hljs-type,
+.hljs-params,
+.hljs-meta,
+.hljs-link {
+	color: #f5871f;
+}
+
+/* Tomorrow Yellow */
+.hljs-attribute {
+	color: #eab700;
+}
+
+/* Tomorrow Green */
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+	color: #718c00;
+}
+
+/* Tomorrow Blue */
+.hljs-title,
+.hljs-section {
+	color: #4271ae;
+}
+
+/* Tomorrow Purple */
+.hljs-keyword,
+.hljs-selector-tag {
+	color: #8959a8;
+}
+
+.hljs {
+	display: block;
+	overflow-x: auto;
+	color: #4d4d4c;
+	padding: 0.5em;
+}
+
+.hljs-emphasis {
+	font-style: italic;
+}
+
+.hljs-strong {
+	font-weight: bold;
+}
+</style>
+
+<style>
+/*
+ * Markdown PDF CSS
+ */
+
+ body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif, "Meiryo";
+	padding: 0 12px;
+}
+
+pre {
+	background-color: #f8f8f8;
+	border: 1px solid #cccccc;
+	border-radius: 3px;
+	overflow-x: auto;
+	white-space: pre-wrap;
+	overflow-wrap: break-word;
+}
+
+pre:not(.hljs) {
+	padding: 23px;
+	line-height: 19px;
+}
+
+blockquote {
+	background: rgba(127, 127, 127, 0.1);
+	border-color: rgba(0, 122, 204, 0.5);
+}
+
+.emoji {
+	height: 1.4em;
+}
+
+code {
+	font-size: 14px;
+	line-height: 19px;
+}
+
+/* for inline code */
+:not(pre):not(.hljs) > code {
+	color: #C9AE75; /* Change the old color so it seems less like an error */
+	font-size: inherit;
+}
+
+/* Page Break : use <div class="page"/> to insert page break
+-------------------------------------------------------- */
+.page {
+	page-break-after: always;
+}
+
+</style>
+
+<script src="https://unpkg.com/mermaid/dist/mermaid.min.js"></script>
+</head>
+<body>
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: document.body.classList.contains('vscode-dark') || document.body.classList.contains('vscode-high-contrast')
+          ? 'dark'
+          : 'default'
+    });
+  </script>
+<h1 id="impact-of-branch-restructuring-on-local-deposit-and-credit-markets">Impact of Branch Restructuring on Local Deposit and Credit Markets</h1>
+<p>This document gathers results on the broader implications of branch restructuring, addressing <strong>editor comment 3</strong> and the referee’s requests on contribution and lending (e.g. <strong>referee.1</strong>, <strong>referee.3</strong>): why closures and openings matter—how they reallocate deposits across nearby branches, alter local market structure and competition, and whether they spill over into credit supply. The first section quantifies deposit reallocation in a ZIP–year panel; the second section reports evidence on mortgage and small-business (CRA) lending.</p>
+<h2 id="1-deposit-reallocation-around-branch-closures-and-openings">1. Deposit Reallocation Around Branch Closures and Openings</h2>
+<p><em>Source: <code>code/analysis/incumbent_chg_opening_closure_02182026_v2.qmd</code></em></p>
+<p>We relate one-year deposit growth at <em>incumbent</em> banks (those with no openings or closures in the ZIP–year) to two branch-count treatments: the fraction of branches closed and the fraction of new branches in the ZIP, with the prior-year ZIP deposit base as the common scale so coefficients are pass-through elasticities. ZIP and CBSA–year fixed effects and pre-trend (<code>zip_growth_3yr</code>) are included; standard errors are clustered by ZIP. The table reports estimates by subperiod (2000–2007, 2008–2011, 2012–2019, 2020–2024).</p>
+<pre class="hljs"><code><div>                            2000-7 (1) 2000-7 (2) 2008-11 .. 2008-11 ...1 2012-19 .. 2012-19 ...1 2020-24 .. 2020-24 ...1
+Dependent Var.:                 gr_1yr     gr_1yr     gr_1yr       gr_1yr     gr_1yr       gr_1yr     gr_1yr       gr_1yr
+                                                                                                                         
+fraction_of_branches_closed  0.0574***             0.0490***              -0.0238***              -0.0438***             
+                            (0.0123)              (0.0125)                (0.0068)                (0.0107)               
+fraction_of_new_branches    -0.0493***            -0.0438***              -0.0607***              -0.0691***             
+                            (0.0064)              (0.0097)                (0.0095)                (0.0192)               
+share_deps_closed                       0.1096***               0.1353***              -0.0141                 -0.0482***
+                                       (0.0224)                (0.0205)                (0.0100)                (0.0147)  
+zip_growth_3yr               1.27e-5    1.29e-5    0.0001***    0.0001***  4.96e-6*     5.21e-6*  -0.0002      -0.0002   
+                            (1.31e-5)  (1.33e-5)  (1.97e-5)    (1.97e-5)  (2.6e-6)     (2.72e-6)  (0.0007)     (0.0007)  
+log1p(branches_zip_lag1)    -0.0479*** -0.0230*** -0.0155       0.0024    -0.0262***   -0.0203*** -0.0382***   -0.0276** 
+                            (0.0074)   (0.0066)   (0.0104)     (0.0093)   (0.0054)     (0.0053)   (0.0112)     (0.0114)  
+Fixed-Effects:              ---------- ---------- ----------   ---------- ----------   ---------- ----------   ----------
+ZIPBR                              Yes        Yes        Yes          Yes        Yes          Yes        Yes          Yes
+cbsa_yr                            Yes        Yes        Yes          Yes        Yes          Yes        Yes          Yes
+___________________________ __________ __________ __________   __________ __________   __________ __________   __________
+S.E.: Clustered              by: ZIPBR  by: ZIPBR  by: ZIPBR    by: ZIPBR  by: ZIPBR    by: ZIPBR  by: ZIPBR    by: ZIPBR
+Observations                    55,198     55,198     48,193       48,193     94,257       94,257     43,786       43,786
+R2                             0.41799    0.41683    0.38280      0.38297    0.36369      0.36302    0.49178      0.49124
+Within R2                      0.00333    0.00135    0.00171      0.00198    0.00144      0.00039    0.00186      0.00082
+---
+Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
+</div></code></pre>
+<h2 id="2-impact-on-mortgage-and-cra-lending">2. Impact on Mortgage and CRA Lending</h2>
+<p><em>Source: <code>code/analysis/closure_credit_impacts_02192026.qmd</code></em></p>
+<p>We test whether areas that experience branch closures or net branch reductions see declines in mortgage origination (HMDA) or small-business lending (CRA), particularly for lower-income or underserved borrowers—addressing <strong>editor comment 3</strong>, <strong>referee comment 1</strong> (broader implications, downstream credit outcomes), and <strong>referee comment 3</strong> (who is hurt or helped by restructuring).</p>
+<p><strong>Design.</strong> The unit of observation is <strong>county–year</strong>. We build a county–year panel from the branch-level sample (<code>branch_closure_analysis_sample_02172026.rds</code>): at each county–year we compute the fraction of branches closed and the fraction of new branches (same definitions as in the ZIP deposit reallocation analysis). County–year mortgage volume is the sum of bank–county HMDA originations; CRA volume is the sum of bank–county CRA small-business loan amounts. Outcomes are one-year growth rates in mortgage and CRA volume (<code>gr_mortgage_1yr</code>, <code>gr_cra_1yr</code>). Regressions include county and year fixed effects, three-year pre-trend in county deposits (<code>county_growth_3yr</code>), and log lagged branch count; standard errors are clustered by county. The script also produces baseline results by subperiod (2000–2007, 2008–2011, 2012–2019, 2020–2024) in separate tables.</p>
+<p><strong>Heterogeneity by income and LMI (table below).</strong> The table reports baseline specifications (no interaction) and specifications that interact both the closure share and the opening share with (i) low-income county (below median county income) and (ii) <strong>population-weighted LMI</strong> (<code>pop_w_lmi</code>): the share of county population in FHFA low-income tracts (above median = high-LMI county). The sample is county–years with year ≥ 2004, excluding 2008–2011 (GFC) and 2020 (pandemic) so that estimates reflect normal-cycle variation. Columns shown here are: mortgage baseline, mortgage × LMI (pop_w_lmi), CRA baseline, CRA × LMI (pop_w_lmi). This speaks directly to “who is hurt”: the interaction terms show whether effects of closures and openings on lending differ in lower-income or high-LMI counties. For example, in the mortgage × LMI column, the negative coefficient on <em>fraction_of_branches_closed × pop_w_lmi</em> indicates that the adverse association between closures and mortgage growth is stronger in high-LMI counties; the CRA × LMI column shows a positive interaction of <em>fraction_of_new_branches × pop_w_lmi</em> for CRA lending (new branches associated with higher CRA growth in high-LMI counties).</p>
+<pre class="hljs"><code><div>                                         Mtg (baseline)      Mtg × LMI CRA (bas.. CRA × LMI
+Dependent Var.:                         gr_mortgage_1yr gr_mortgage_1yr gr_cra_1yr gr_cra_1yr
+                                                                                             
+fraction_of_branches_closed                  -0.0161          0.0425    -0.0093    -0.0518   
+                                             (0.0229)        (0.0332)   (0.0523)   (0.0747)  
+fraction_of_new_branches                      0.0857***       0.0996*** -0.0372    -0.1162** 
+                                             (0.0205)        (0.0292)   (0.0420)   (0.0586)  
+log1p(branches_county_lag1)                   0.0255***       0.0245*** -0.0367**  -0.0366** 
+                                             (0.0073)        (0.0073)   (0.0144)   (0.0145)  
+county_growth_3yr                            -0.0008         -0.0007    -0.0040*   -0.0040*  
+                                             (0.0009)        (0.0009)   (0.0022)   (0.0023)  
+log1p(total_deps_county_lag1)                -0.0434***      -0.0421*** -0.0465*** -0.0466***
+                                             (0.0051)        (0.0051)   (0.0096)   (0.0095)  
+pop_w_lmi                                                     0.0059               -0.0341*  
+                                                             (0.0084)              (0.0185)  
+fraction_of_branches_closed x pop_w_lmi                      -0.2689**              0.1771   
+                                                             (0.1294)              (0.2411)  
+fraction_of_new_branches x pop_w_lmi                         -0.0763                0.4100*  
+                                                             (0.0949)              (0.2133)  
+Fixed-Effects:                          --------------- --------------- ---------- ----------
+county_code                                         Yes             Yes        Yes        Yes
+year                                                Yes             Yes        Yes        Yes
+_______________________________________ _______________ _______________ __________ __________
+S.E.: Clustered                         by: county_code by: county_code by: coun.. by: coun..
+Observations                                     41,726          41,617     41,726     41,617
+R2                                              0.53042         0.53113    0.10852    0.10864
+Within R2                                       0.00253         0.00267    0.00122    0.00146
+---
+Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
+</div></code></pre>
+
+</body>
+</html>

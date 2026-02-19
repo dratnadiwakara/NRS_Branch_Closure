@@ -13,6 +13,9 @@ alwaysApply: true
 - **Documentation:** Use **Roxygen2** style (`#'`) to document every custom function.
 - **Project Hygiene:** Every major computed object should be cached/saved using `saveRDS()`.
 - **Comments:** Focus on the **WHY** (logic/intent) rather than the **WHAT**.
+- **Data Lineage (Crucial):** Whenever a script reads a dataset created by another script in this project (e.g., via `readRDS()` or `load()`), you MUST add a comment immediately above the read command pointing to the source script that generated it.
+    - *Example:* `# Data created by code/sample-construction/create_panel.R`
+    - `dt <- readRDS(paste0(data_path, "final_panel.rds"))`
 
 ## 2. Data Management
 - **Primary Storage:** By default, all raw and processed data files are stored in: `C:/OneDrive/data/nrs_branch_closure`.
