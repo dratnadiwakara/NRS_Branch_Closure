@@ -23,8 +23,8 @@ branch_df <- readRDS(file.path(data_dir, "branch_closure_panel.rds"))
 # Zip-year demographics (ACS + IRS) (created by create_zip_demographics_panel.R)
 zip_demo_data <- readRDS(file.path(data_dir, "zip_demographics_panel.rds"))
 
-# County-year controls (HMDA, CRA, CBP, GDP, LMI) (created by create_county_controls_panel.R)
-county_control_df <- readRDS(file.path(data_dir, "county_controls_panel.rds"))
+# County-year controls (HMDA, CRA, CBP, GDP, LMI) (created by create_county_controls_panel_02192026.R)
+county_control_df <- readRDS(file.path(data_dir, "county_controls_panel_02192026.rds"))
 
 # Branch visits data (SafeGraph)
 branch_visits <- readRDS(file.path(data_dir, "bank_branch_visits_count_2019_2022.rds"))
@@ -274,4 +274,4 @@ final_sample[, age := median_age]
 # 8. Save Output
 # ==============================================================================
 
-saveRDS(final_sample, file = file.path(data_dir, "branch_closure_analysis_sample_02172026.rds"))
+saveRDS(final_sample, file = file.path(data_dir, "branch_closure_analysis_sample_02192026.rds"))
