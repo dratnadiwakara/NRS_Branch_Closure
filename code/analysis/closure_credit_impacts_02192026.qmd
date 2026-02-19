@@ -1,0 +1,250 @@
+# County-Year Mortgage and CRA Lending Impacts of Branch Restructuring
+
+Addresses **editor comment 3** and **referee comments 1 and 3**: impact of branch closures/openings on local mortgage (HMDA) and small-business (CRA) lending, with heterogeneity by income/LMI.
+
+```{r}
+# =============================================================================
+# PART 0: Setup
+# =============================================================================
+
+rm(list = ls())
+
+library(data.table)
+library(dplyr)
+library(fixest)
+library(DescTools)
+library(stringr)
+
+data_dir <- "C:/OneDrive/data/nrs_branch_closure"
+SAMPLE_YEARS <- 2000:2024
+
+sum_na_safe <- function(x) {
+  if (all(is.na(x))) return(NA_real_)
+  as.numeric(sum(x, na.rm = TRUE))
+}
+```
+
+```{r}
+# =============================================================================
+# PART 1: Build county-year panel
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# 1a. Load branch-level sample and compute new_branch; aggregate to county-year
+# -----------------------------------------------------------------------------
+
+branch_sample <- readRDS(file.path(data_dir, "branch_closure_analysis_sample_02172026.rds"))
+setDT(branch_sample)
+branch_sample[, STCNTYBR := str_pad(STCNTYBR, 5, "left", "0")]
+
+# new_branch = first year a branch appears in the panel
+branch_sample[, first_yr := min(yr), by = UNINUMBR]
+branch_sample[, new_branch := fifelse(yr == first_yr, 1L, 0L)]
+
+# County-year branch restructuring (align with ZIP logic: STCNTYBR = county)
+county_mkt <- branch_sample[, .(
+  branches_county_curr   = uniqueN(UNINUMBR),
+  total_deps_county_curr = sum(DEPSUMBR, na.rm = TRUE),
+  n_closed_county_yr     = sum(closed, na.rm = TRUE),
+  n_new_county_yr        = sum(new_branch, na.rm = TRUE),
+  # County-year income proxy (mean of zip median_income where branches are)
+  median_income_county_yr = mean(median_income, na.rm = TRUE)
+), by = .(STCNTYBR, yr)]
+
+setorder(county_mkt, STCNTYBR, yr)
+county_mkt[, branches_county_lag1   := shift(branches_county_curr,   1L, type = "lag"), by = STCNTYBR]
+county_mkt[, total_deps_county_lag1 := shift(total_deps_county_curr, 1L, type = "lag"), by = STCNTYBR]
+county_mkt[, total_deps_county_lag3 := shift(total_deps_county_curr, 3L, type = "lag"), by = STCNTYBR]
+county_mkt[, county_growth_3yr := (total_deps_county_lag1 - total_deps_county_lag3) / total_deps_county_lag3]
+county_mkt[, county_growth_3yr := fifelse(is.finite(county_growth_3yr), county_growth_3yr, NA_real_)]
+
+# Branch-count treatment (same as ZIP)
+county_mkt[, fraction_of_branches_closed := n_closed_county_yr / pmax(branches_county_lag1, 1)]
+county_mkt[, fraction_of_new_branches   := n_new_county_yr   / pmax(branches_county_lag1, 1)]
+
+# Rename for merge
+setnames(county_mkt, c("STCNTYBR", "yr"), c("county_code", "year"))
+```
+
+```{r}
+# -----------------------------------------------------------------------------
+# 1b. County-year HMDA and CRA volumes (levels and growth)
+# -----------------------------------------------------------------------------
+
+hmda_bank <- readRDS(file.path(data_dir, "hmda_bank_county_yr.rds"))
+setDT(hmda_bank)
+if (!"bank_county_mortgage_volume" %in% names(hmda_bank)) {
+  stop("hmda_bank_county_yr must contain bank_county_mortgage_volume or similar.")
+}
+# Backfill 2000-2003 with 2004
+for (y in 2000:2003) {
+  temp_hmda <- copy(hmda_bank[year == 2004])
+  temp_hmda[, year := y]
+  hmda_bank <- rbind(hmda_bank, temp_hmda)
+}
+hmda_county_yr <- hmda_bank[, .(mortgage_vol = sum(bank_county_mortgage_volume, na.rm = TRUE)),
+                            by = .(county_code, year)]
+setorder(hmda_county_yr, county_code, year)
+hmda_county_yr[, mortgage_vol_lag1 := shift(mortgage_vol, 1L, type = "lag"), by = county_code]
+hmda_county_yr[, gr_mortgage_1yr := (mortgage_vol - mortgage_vol_lag1) / pmax(mortgage_vol_lag1, 1)]
+hmda_county_yr[, log_mortgage := log1p(mortgage_vol)]
+hmda_county_yr[, gr_mortgage_1yr := fifelse(is.finite(gr_mortgage_1yr), gr_mortgage_1yr, NA_real_)]
+
+cra_bank <- readRDS(file.path(data_dir, "cra_bank_county_yr.rds"))
+setDT(cra_bank)
+if (!"loan_amt" %in% names(cra_bank)) stop("cra_bank_county_yr must contain loan_amt.")
+# Backfill 2000-2003 with 2004
+for (y in 2000:2003) {
+  temp_cra <- copy(cra_bank[year == 2004])
+  temp_cra[, year := y]
+  cra_bank <- rbind(cra_bank, temp_cra)
+}
+cra_county_yr <- cra_bank[, .(cra_vol = sum(loan_amt, na.rm = TRUE)), by = .(county_code, year)]
+setorder(cra_county_yr, county_code, year)
+cra_county_yr[, cra_vol_lag1 := shift(cra_vol, 1L, type = "lag"), by = county_code]
+cra_county_yr[, gr_cra_1yr := (cra_vol - cra_vol_lag1) / pmax(cra_vol_lag1, 1)]
+cra_county_yr[, log_cra := log1p(cra_vol)]
+cra_county_yr[, gr_cra_1yr := fifelse(is.finite(gr_cra_1yr), gr_cra_1yr, NA_real_)]
+```
+
+```{r}
+# -----------------------------------------------------------------------------
+# 1c. Merge county controls and build final county-year panel
+# -----------------------------------------------------------------------------
+
+county_controls <- readRDS(file.path(data_dir, "county_controls_panel.rds"))
+setDT(county_controls)
+if ("YEAR" %in% names(county_controls)) setnames(county_controls, "YEAR", "year")
+
+# Start with county-year restructuring
+dt_county <- copy(county_mkt)
+dt_county <- merge(dt_county, hmda_county_yr[, .(county_code, year, mortgage_vol, log_mortgage, gr_mortgage_1yr, mortgage_vol_lag1)],
+                  by = c("county_code", "year"), all.x = TRUE)
+dt_county <- merge(dt_county, cra_county_yr[, .(county_code, year, cra_vol, log_cra, gr_cra_1yr, cra_vol_lag1)],
+                  by = c("county_code", "year"), all.x = TRUE)
+dt_county <- merge(dt_county, county_controls,
+                  by = c("county_code", "year"), all.x = TRUE)
+
+# Controls available in county_controls_panel
+ctrl_vars <- c("lag_county_deposit_gr", "lag_county_deposit_hhi", "lmi",
+               "lag_hmda_mtg_amt_gr", "lag_cra_loan_amount_amt_lt_1m_gr",
+               "lag_establishment_gr", "lag_payroll_gr", "log_population_density", "population_density")
+ctrl_vars <- ctrl_vars[ctrl_vars %in% names(dt_county)]
+dt_county[, log_income_county := log1p(median_income_county_yr)]
+
+# Restrict sample: year range, minimum branches, non-missing key vars
+dt_county <- dt_county[year %in% SAMPLE_YEARS & branches_county_lag1 >= 2]
+dt_county[, fraction_of_branches_closed := Winsorize(fraction_of_branches_closed, probs = c(0, 0.99), na.rm = TRUE)]
+dt_county[, fraction_of_new_branches    := Winsorize(fraction_of_new_branches,    probs = c(0, 0.99), na.rm = TRUE)]
+
+# LMI / income for heterogeneity
+dt_county[, low_income_county := fifelse(median_income_county_yr < median(median_income_county_yr, na.rm = TRUE), 1L, 0L)]
+dt_county[is.na(low_income_county), low_income_county := 0L]
+if ("lmi" %in% names(dt_county)) {
+  dt_county[, lmi_high := fifelse(lmi > median(lmi, na.rm = TRUE), 1L, 0L)]
+  dt_county[is.na(lmi_high), lmi_high := 0L]
+}
+
+cat("County-year panel: ", nrow(dt_county), " observations.\n")
+```
+
+```{r}
+# =============================================================================
+# PART 2: Formula definitions
+# =============================================================================
+
+setFixest_fml(
+  ..fe       = ~ county_code + year,
+  ..controls = ~ county_growth_3yr + log1p(branches_county_lag1),
+  ..het_vars = ~ log_income_county
+)
+setFixest_etable(signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.1), se.below = TRUE)
+```
+
+```{r}
+# =============================================================================
+# PART 3: Baseline regressions — mortgage lending
+# =============================================================================
+
+r_mtg <- list()
+r_mtg[["2000-2007"]] <- feols(
+  gr_mortgage_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
+  data = dt_county[year %in% 2000:2007], vcov = ~ county_code
+)
+r_mtg[["2008-2011"]] <- feols(
+  gr_mortgage_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
+  data = dt_county[year %in% 2008:2011], vcov = ~ county_code
+)
+r_mtg[["2012-2019"]] <- feols(
+  gr_mortgage_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
+  data = dt_county[year %in% 2012:2019], vcov = ~ county_code
+)
+r_mtg[["2020-2024"]] <- feols(
+  gr_mortgage_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
+  data = dt_county[year %in% 2020:2024], vcov = ~ county_code
+)
+etable(r_mtg)
+```
+
+```{r}
+# =============================================================================
+# PART 4: Baseline regressions — CRA lending
+# =============================================================================
+
+r_cra <- list()
+r_cra[["2000-2007"]] <- feols(
+  gr_cra_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
+  data = dt_county[year %in% 2000:2007], vcov = ~ county_code
+)
+r_cra[["2008-2011"]] <- feols(
+  gr_cra_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
+  data = dt_county[year %in% 2008:2011], vcov = ~ county_code
+)
+r_cra[["2012-2019"]] <- feols(
+  gr_cra_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
+  data = dt_county[year %in% 2012:2019], vcov = ~ county_code
+)
+r_cra[["2020-2024"]] <- feols(
+  gr_cra_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
+  data = dt_county[year %in% 2020:2024], vcov = ~ county_code
+)
+etable(r_cra)
+```
+
+```{r}
+# =============================================================================
+# PART 5: Heterogeneity by income and LMI
+# =============================================================================
+
+# Mortgage: closure effect by low-income county
+r_mtg_het <- list()
+r_mtg_het[["Mortgage"]] <- feols(
+  gr_mortgage_1yr ~ fraction_of_branches_closed * low_income_county +
+    fraction_of_new_branches + ..controls | ..fe,
+  data = dt_county[year %in% SAMPLE_YEARS], vcov = ~ county_code
+)
+if ("lmi_high" %in% names(dt_county)) {
+  r_mtg_het[["Mortgage_LMI"]] <- feols(
+    gr_mortgage_1yr ~ fraction_of_branches_closed * lmi_high +
+      fraction_of_new_branches + ..controls | ..fe,
+    data = dt_county[year %in% SAMPLE_YEARS], vcov = ~ county_code
+  )
+}
+
+# CRA: closure effect by low-income county
+r_cra_het <- list()
+r_cra_het[["CRA"]] <- feols(
+  gr_cra_1yr ~ fraction_of_branches_closed * low_income_county +
+    fraction_of_new_branches + ..controls | ..fe,
+  data = dt_county[year %in% SAMPLE_YEARS], vcov = ~ county_code
+)
+if ("lmi_high" %in% names(dt_county)) {
+  r_cra_het[["CRA_LMI"]] <- feols(
+    gr_cra_1yr ~ fraction_of_branches_closed * lmi_high +
+      fraction_of_new_branches + ..controls | ..fe,
+    data = dt_county[year %in% SAMPLE_YEARS], vcov = ~ county_code
+  )
+}
+etable(r_mtg_het)
+etable(r_cra_het)
+```

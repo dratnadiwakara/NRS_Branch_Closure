@@ -1,0 +1,117 @@
+---
+description: Standards for R programming, ggplot2 visualization, and reproducible research.
+globs: ["*.R", "*.Rmd", "*.qmd"]
+alwaysApply: true
+---
+
+# R Coding & Visualization Standards
+
+## 1. General Principles
+- **Library Management:** Always place `library()` calls at the very top of the script.
+- **Reproducibility:** Include `set.seed()` exactly once at the top of the file if any randomness is involved.
+- **Pathing:** All file paths MUST be relative to the project root. Never use absolute paths.
+- **Documentation:** Use **Roxygen2** style (`#'`) to document every custom function.
+- **Project Hygiene:** Every major computed object should be cached/saved using `saveRDS()`.
+- **Comments:** Focus on the **WHY** (logic/intent) rather than the **WHAT**.
+
+## 2. Data Management
+- **Primary Storage:** By default, all raw and processed data files are stored in: `C:/OneDrive/data/nrs_branch_closure`.
+- **Exceptions:** While this is the general rule, individual scripts may use in rare cases use different paths.
+- **Path Variable:** Define a base path variable at the start of the script for easy switching: `data_path <- "C:/OneDrive/data/nrs_branch_closure"`.
+
+## 3. Global Color Palette
+Use these variables for all visualization and branding:
+- `primary_blue    <- "#012169"`
+- `primary_gold    <- "#f2a900"`
+- `accent_gray     <- "#525252"`
+- `positive_green  <- "#15803d"`
+- `negative_red    <- "#b91c1c"`
+
+## 4. Data Visualization (ggplot2)
+Always apply the following theme. **Note: Legend titles must be removed.**
+
+```r
+theme_custom <- function(base_size = 14) {
+  theme_minimal(base_size = base_size) +
+    theme(
+      plot.title       = element_text(face = "bold", color = "#012169"),
+      legend.position  = "bottom",
+      legend.title     = element_blank(),
+      plot.background  = element_rect(fill = "transparent", color = NA),
+      panel.background = element_rect(fill = "transparent", color = NA)
+    )
+}
+```
+
+## 5. Export Standards (ggsave)
+- Location: All figures must be saved in the figures/ directory relative to the project root.
+- Naming: Append the current date in mmddyyyy suffix (e.g., filename_02182026.png).
+- Format: Always set bg = "transparent" and provide explicit width and height dimensions.
+
+Standard ggsave Template:
+
+```r
+# Generate date suffix
+dat_suffix <- format(Sys.Date(), "%m%d%Y")
+
+# Example Save
+ggsave(
+  filename = paste0("figures/plot_name_", dat_suffix, ".png"),
+  plot = last_plot(),
+  width = 8, 
+  height = 6, 
+  bg = "transparent"
+)
+```
+
+
+## 6. Econometric Modeling (fixest)
+Always use the `fixest` package for regressions. Use global macros (`setFixest_fml` and `setFixest_etable`) to maintain a clean and consistent model structure across scripts.
+
+### Macro Structure Template
+Initialize scripts using this order (adjusting the specific variables based on the unit of analysis, this is only an example.):
+
+```r
+library(fixest)
+
+# Template: Adjust geography/controls based on the specific Task
+setFixest_fml(
+  ..fe       = ~ ZIPBR + cbsa_yr,                        # Unit + Time Fixed Effects
+  ..controls = ~ zip_growth_3yr + log1p(branches_zip_lag1), # Standard Controls
+  ..het_vars = ~ sophisticated + factor_age_bin + log_income # Heterogeneity/Interaction terms
+)
+
+# Global Export Formatting 
+setFixest_etable(
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.1),
+  se.below = TRUE
+)
+```
+
+## 8. Results Storage & Model Management
+To ensure models are easily exportable to tables, follow this list-based storage pattern:
+
+- **Initialization:** Always start the analysis section with `r <- list()`.
+- **Naming:** Use descriptive keys for the list (e.g., `"Joint"`, `"Pre 2012"`, `"Het Post 2012"`).
+- **Interaction Syntax:** Use the shorthand `formula = y ~ var1*(..het_vars)` for heterogeneity analysis to maintain consistency.
+- **VCOV:** Default to clustering at the unit level (e.g., `vcov = ~ZIPBR` or `vcov = ~RSSDID`) as specified in the plan.
+
+**Pattern Example:**
+```r
+r <- list()
+
+# Use macros and list storage
+r[["Joint"]] <- feols(
+  gr_1yr ~ share_deps_closed + pred_share_opened + ..controls | ..fe,
+  data = dt_combined, 
+  vcov = ~ZIPBR
+)
+
+# Interaction with heterogeneity macros
+r[["Het Pre 2012"]] <- feols(
+  gr_1yr ~ share_deps_closed*(..het_vars) + pred_share_opened*(..het_vars) + ..controls | ..fe,
+  data = dt_combined[YEAR <= 2012], 
+  vcov = ~ZIPBR
+)
+```
+

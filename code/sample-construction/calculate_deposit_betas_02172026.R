@@ -19,10 +19,22 @@ data_dir <- "C:/OneDrive/data/nrs_branch_closure"
 # ==============================================================================
 
 # Branch analysis sample (created by create_closure_analysis_sample.R)
-branch_df <- readRDS(file.path(data_dir, "branch_closure_analysis_sample.rds"))
+branch_df <- readRDS(file.path(data_dir, "branch_closure_analysis_sample_02172026.rds"))
 
 # Call report data with deposit expense ratios
 call_data <- readRDS(file.path(data_dir, "call_data_02172026.rds"))
+
+# Replace missing values with closest available value after current date (backward fill) per bank
+setDT(call_data)
+call_data[, D_DT := as.Date(D_DT)]
+setorder(call_data, ID_RSSD, D_DT)
+cols_na <- names(call_data)[sapply(call_data, function(x) any(is.na(x)))]
+for (col in cols_na) {
+  if (is.numeric(call_data[[col]])) {
+    call_data[, (col) := nafill(get(col), type = "nocb"), by = ID_RSSD]
+  }
+}
+
 
 # ==============================================================================
 # 2. Aggregate Branch Demographics to Bank Level (Deposit-Weighted)
@@ -48,6 +60,10 @@ aggregate_bank_demographics <- function(data, yr_filter) {
     bank_hhi = first(bank_hhi),
     bank_assets = first(bank_assets),
     trans_accts_frac_assets = first(trans_accts_frac_assets),
+    core_deposits_assets = first(core_deposits_assets),
+    time_deposits_assets = first(time_deposits_assets),
+    ci_assets = first(ci_assets),
+    brokered_deposits_assets = first(brokered_deposits_assets),
     uninsured_deposits_frac = first(uninsured_deposits_frac)
   ), by = RSSDID]
   
@@ -74,8 +90,8 @@ calculate_cycle_beta <- function(call_data, bank_demos, start_date, end_date) {
   cycle_wide <- cycle_wide[!is.na(deposit_exp_chg)]
   
   # Winsorize at 2/98 percentiles
-  q02 <- quantile(cycle_wide$deposit_exp_chg, 0.02, na.rm = TRUE)
-  q98 <- quantile(cycle_wide$deposit_exp_chg, 0.98, na.rm = TRUE)
+  q02 <- quantile(cycle_wide$deposit_exp_chg, 0.01, na.rm = TRUE)
+  q98 <- quantile(cycle_wide$deposit_exp_chg, 0.99, na.rm = TRUE)
   cycle_wide <- cycle_wide[deposit_exp_chg > q02 & deposit_exp_chg < q98]
   
   # Merge with bank demographics
@@ -138,16 +154,23 @@ for(cycle_name in names(cycles)) {
   cycle_data[, deposit_beta := deposit_exp_chg / cycle$rate_change]
   
   # Regression: demographics -> deposit beta
+  # reg <- feols(
+  #   deposit_exp_chg ~ factor_age_bin + log(family_income) + dividend_frac + college_frac +
+  #     bank_hhi + log(bank_assets) + population_density + trans_accts_frac_assets + uninsured_deposits_frac,
+  #   data = cycle_data,
+  # )
   reg <- feols(
-    deposit_exp_chg ~ factor_age_bin + log(family_income) + dividend_frac + college_frac +
-      bank_hhi + log(bank_assets) + population_density + trans_accts_frac_assets + uninsured_deposits_frac,
+    deposit_exp_chg ~ factor_age_bin + dividend_frac + college_frac +  log(family_income) +
+      bank_hhi + log(bank_assets) + population_density + trans_accts_frac_assets + 
+      uninsured_deposits_frac + time_deposits_assets,
     data = cycle_data,
   )
   
   # Regression: sophistication -> deposit beta
   reg_soph <- feols(
-    deposit_exp_chg ~ sophisticated_frac + factor_age_bin + log(family_income) +
-      bank_hhi + log(bank_assets) + population_density + trans_accts_frac_assets + uninsured_deposits_frac,
+    deposit_exp_chg ~ sophisticated_frac + factor_age_bin +  log(family_income) +
+      bank_hhi + log(bank_assets) + population_density + trans_accts_frac_assets + 
+      uninsured_deposits_frac + time_deposits_assets,
     data = cycle_data
   )
   
@@ -165,3 +188,6 @@ for(cycle_name in names(cycles)) {
 # ==============================================================================
 
 saveRDS(results, file = file.path(data_dir, "deposit_beta_results_v02172026.rds"))
+
+etable(results$cycle_0406$reg,results$cycle_1619$reg,results$cycle_2224$reg)
+etable(results$cycle_0406$reg_soph,results$cycle_1619$reg_soph,results$cycle_2224$reg_soph)
