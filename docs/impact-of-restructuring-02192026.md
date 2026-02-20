@@ -1,3 +1,8 @@
+---
+layout: default
+title: Impact of branch restructuring — NRS Branch Closure
+---
+## [← Index](index.html) · [1. Editor and referee comments](response-plan.html)
 
 # Impact of Branch Restructuring on Local Deposit and Credit Markets
 

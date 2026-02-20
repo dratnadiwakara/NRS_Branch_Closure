@@ -1,3 +1,9 @@
+---
+layout: default
+title: Descriptive statistics – opening sample — NRS Branch Closure
+---
+## [← Index](index.html) · [1. Editor and referee comments](response-plan.html)
+
 # Descriptive Statistics - Branch Opening Sample
 
 Summary statistics for the branch opening analysis sample, by bank size and period (Mid Cycle 2019, Early Cycle 2012). SD (within) is computed from residuals of regressions on county-year and bank-year fixed effects for Deposit Beta and log(Zip Deposits) only.

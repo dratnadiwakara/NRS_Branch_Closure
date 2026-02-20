@@ -1,3 +1,8 @@
+---
+layout: default
+title: Editor and referee comments — NRS Branch Closure
+---
+## [← Index](index.html) · [1. Editor and referee comments](response-plan.html)
 
 # Editor Comments
 

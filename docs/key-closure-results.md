@@ -1,3 +1,9 @@
+---
+layout: default
+title: Key closure results — NRS Branch Closure
+---
+## [← Index](index.html) · [1. Editor and referee comments](response-plan.html)
+
 # Key Branch Closure Results
 
 Collected key regression results from branch closure and opening analysis. No descriptive statistics.
