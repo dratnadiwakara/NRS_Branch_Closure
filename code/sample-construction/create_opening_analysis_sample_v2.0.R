@@ -210,7 +210,7 @@ gc()
 # 9. Add County Controls
 # ==============================================================================
 
-county_controls <- readRDS(file.path(data_dir, "county_controls_panel.rds"))
+county_controls <- readRDS(file.path(data_dir, "county_controls_panel_02192026.rds"))
 setDT(county_controls)
 county_controls <- unique(county_controls, by = c("county_code", "year"))
 setkey(county_controls, county_code, year)
@@ -242,7 +242,7 @@ bank_county_dep <- merge(bank_county_dep, county_hhi, by = c("STCNTYBR", "yr"))
 bank_hhi <- bank_county_dep[, .(bank_hhi = sum(weight * county_hhi)), by = .(RSSDID, yr)]
 
 # Load and prepare call report data
-call_data <- readRDS(file.path(data_dir, "call_data_01282026.rds"))
+call_data <- readRDS(file.path(data_dir, "call_data_02172026.rds"))
 setDT(call_data)
 setnames(call_data, "total_assets", "bank_assets")
 call_data[, `:=`(
@@ -250,18 +250,36 @@ call_data[, `:=`(
   month = month(D_DT)
 )]
 call_data <- call_data[month == 12]
-call_data[, `:=`(
-  ci_assets = ci_loans / bank_assets,
-  uninsured_deposits_frac = deposits_uninsured / (deposits_uninsured + deposits_insured)
-)]
+
+call_data[, ci_assets := ci_loans/bank_assets]
+call_data[, uninsured_deposits_frac := deposits_uninsured/(deposits_uninsured + deposits_insured)]
+
+call_data[,core_deposits_assets:=core_deposits/bank_assets]
+call_data[,time_deposits_assets:=(time_deposits_below_ins_limit+time_deposits_above_ins_limit)/bank_assets]
+call_data[,brokered_deposits_assets:=brokered_deposits/bank_assets]
+
+# Winsorize ratio variables at 1 (max)
+call_data[, ci_assets := pmin(ci_assets, 1)]
+call_data[, uninsured_deposits_frac := pmin(uninsured_deposits_frac, 1)]
+call_data[, core_deposits_assets := pmin(core_deposits_assets, 1)]
+call_data[, time_deposits_assets := pmin(time_deposits_assets, 1)]
+call_data[, brokered_deposits_assets := pmin(brokered_deposits_assets, 1)]
+
 
 # Fill forward uninsured deposits fraction where missing
+call_data <- call_data[, .(yr, ID_RSSD, trans_accts_frac_assets, ci_assets, 
+                                 bank_assets, uninsured_deposits_frac, core_deposits_assets,
+                                 time_deposits_assets, brokered_deposits_assets)]
 setorder(call_data, ID_RSSD, yr)
-call_data[, uninsured_deposits_frac := nafill(uninsured_deposits_frac, type = "nocb"), 
-          by = ID_RSSD]
 
-call_data <- call_data[, .(ID_RSSD, yr, bank_assets, trans_accts_frac_assets, 
-                           ci_assets, uninsured_deposits_frac)]
+# Forward fill uninsured deposits fraction
+call_data[, uninsured_deposits_frac := nafill(uninsured_deposits_frac, type = "nocb"), by = ID_RSSD]
+call_data[, brokered_deposits_assets := nafill(brokered_deposits_assets, type = "nocb"), by = ID_RSSD]
+call_data[, core_deposits_assets := nafill(core_deposits_assets, type = "nocb"), by = ID_RSSD]
+call_data[, time_deposits_assets := nafill(time_deposits_assets, type = "nocb"), by = ID_RSSD]
+call_data[, trans_accts_frac_assets := nafill(trans_accts_frac_assets, type = "nocb"), by = ID_RSSD]
+call_data[, ci_assets := nafill(ci_assets, type = "nocb"), by = ID_RSSD]
+
 
 # Merge bank-level data
 bank_level <- merge(bank_hhi, call_data, 
@@ -400,7 +418,7 @@ bank_zip[,college_frac:=college_frac/100]
 
 
 # Load deposit beta models
-beta_cycles <- readRDS(file.path(data_dir, "deposit_beta_results.rds"))
+beta_cycles <- readRDS(file.path(data_dir, "deposit_beta_results_v02172026.rds"))
 
 
 
@@ -454,9 +472,28 @@ bank_zip <- rbindlist(list(bank_zip_early, bank_zip_mid, bank_zip_late),
 rm(bank_zip_early, bank_zip_mid, bank_zip_late)
 gc()
 
-output_path <- file.path(data_dir, "branch_opening_analysis_sample_with_deposit_beta_v2.rds")
+output_path <- file.path(data_dir, "branch_opening_analysis_sample_with_deposit_beta_v3.rds")
 saveRDS(bank_zip, output_path)
 
 cat("Deposit beta prediction complete.\n")
+
+
+
+library(data.table)
+
+n_parts <- 6L
+n <- nrow(bank_zip)
+
+base <- n %/% n_parts
+rem  <- n %%  n_parts
+sizes <- base + as.integer(seq_len(n_parts) <= rem)
+
+starts <- cumsum(c(1L, head(sizes, -1L)))
+ends   <- cumsum(sizes)
+
+for (i in 1:n_parts) {
+  fn <- file.path(data_dir,sprintf("dt_part_%02d_of_%02d.rds", i, n_parts))
+  saveRDS(bank_zip[starts[i]:ends[i]], file = fn)
+}
 
 

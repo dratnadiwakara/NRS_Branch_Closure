@@ -28,7 +28,11 @@ Below I list my comments. Some of these echo points raised by the referee:
 
    For example, it is unclear a priori whether small-business lending should decline following branch closures. Such an effect may arise if physical branches play an important role in screening and monitoring small firms. Even evidence showing that certain outcomes are not affected would be informative, as it would help clarify which economic margins branch closures do and do not operate through.
 
-<span style="color: #0d6b0d;">**Addressed.** We document (i) how incumbent branches’ deposit growth responds to the fraction of branches closed and new branches in the ZIP (deposit reallocation), and (ii) county-level mortgage and CRA lending growth following branch restructuring, with heterogeneity by income and population-weighted LMI (“who is hurt”). See [Impact of branch restructuring on local deposit and credit markets](docs/impact-of-restructuring-02192026.html) for results.</span>
+<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+
+**✓ Addressed.** We document (i) how incumbent branches’ deposit growth responds to the fraction of branches closed and new branches in the ZIP (deposit reallocation), and (ii) county-level mortgage and CRA lending growth following branch restructuring, with heterogeneity by income and population-weighted LMI (“who is hurt”). See [Impact of branch restructuring on local deposit and credit markets](impact-of-restructuring-02192026.html) for results.
+
+</div>
 
 > **PLAN TO ADDRESS COMMENT**
 > [...]
@@ -75,7 +79,11 @@ While the finding that high-beta branches are more likely to close is interestin
 
 More importantly, even if the evidence on branch closures is convincing, the paper does not address the broader question of why this matters. The analysis would benefit from a deeper exploration of the implications of branch closures. What happens to local competition after a branch closes? How are nearby branches, both within the same bank and across competing banks, affected? Are branch closures/openings clustered across banks within the same area? Who is ultimately hurt or helped by these closures? Quantifying the effects on market structure, deposit pricing, or consumer outcomes would substantially strengthen the paper’s contribution beyond documenting closure patterns.
 
-<span style="color: #0d6b0d;">**Addressed (in part).** We quantify (i) how incumbent banks’ deposit growth in a ZIP responds to the fraction of branches closed and the fraction of new branches in that ZIP (how nearby branches are affected; deposit reallocation), and (ii) county-level mortgage and CRA lending growth following restructuring, with heterogeneity by low-income and high–LMI counties (“who is hurt or helped”).  See [Impact of branch restructuring on local deposit and credit markets](docs/impact-of-restructuring-02192026.html) for results.</span>
+<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+
+**✓ Addressed (in part).** We quantify (i) how incumbent banks’ deposit growth in a ZIP responds to the fraction of branches closed and the fraction of new branches in that ZIP (how nearby branches are affected; deposit reallocation), and (ii) county-level mortgage and CRA lending growth following restructuring, with heterogeneity by low-income and high–LMI counties (“who is hurt or helped”).  See [Impact of branch restructuring on local deposit and credit markets](impact-of-restructuring-02192026.html) for results.
+
+</div>
 
 > **PLAN TO ADDRESS COMMENT**
 >
@@ -94,9 +102,15 @@ The paper measures deposit beta by aggregating all deposit categories (checking,
 
 For example, a bank or branch with a high beta driven by a large share of time deposits is fundamentally different from one with a low beta driven by a predominance of savings or checking deposits. Treating these as comparable risks conflates compositional effects with behavioral or demographic effects and may distort the interpretation of the results.
 
+<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+
+**✓ Addressed.** Time-deposit share (`time_deposits_assets`) added to the first-stage deposit beta model. See [Key closure results](key-closure-results.html) (Deposit Beta Regression table).
+
+</div>
+
 > **PLAN TO ADDRESS COMMENT**
 >
-> - [ ] For the "first stage" model to predict deposit betas, add more bank-level controls to capture different types of funding.  Currently we have 2: transactions deposits and uninsured deposits.  Can we add at least one more, such as the fraction of time deposits?  This would help us address referee comment 2.  (The other way to do it would be to estimate deposit betas separately by deposit type and then use a weighted average.  I don't really think this is worth the trouble since we do not know the shares at the branch level.)
+> - [X] For the "first stage" model to predict deposit betas, add more bank-level controls to capture different types of funding.  Currently we have 2: transactions deposits and uninsured deposits.  Can we add at least one more, such as the fraction of time deposits?  This would help us address referee comment 2.  (The other way to do it would be to estimate deposit betas separately by deposit type and then use a weighted average.  I don't really think this is worth the trouble since we do not know the shares at the branch level.)
 
 ### **3. Branch opening versus closure and the role of income**
 The paper consistently interprets deposit beta as a measure of branch profitability, arguing that lower-beta branches generate greater deposit franchise value. As the authors state, “Deposit Beta provides a consistent ranking: low beta branches generate more value for the bank than high beta ones.” This interpretation naturally explains why banks would close branches with higher betas and lower profitability.
@@ -107,11 +121,15 @@ In principle, low beta may simply reflect a lack of competition, in which case e
 
 In addition, evidence from the closure and opening regressions with local demographic characteristics suggests that local income is a consistent predictor of branch location decisions. Banks appear less likely to close branches and more likely to open them in wealthier areas, consistent with a desire to maximize deposits. This pattern aligns with industry reports and press coverage (e.g., *Wall Street Journal*, “America’s Biggest Bank Is Growing the Old-Fashioned Way: Branches,” 2024) emphasizing the importance of local income and wealth. The wealthiness of an area may matter not only for deposit availability but also for cross-selling opportunities such as credit cards or wealth management. Notably, wealthier areas also tend to have lower deposit betas, as shown in Table 2. This raises the possibility that the branch closure results are driven less by pricing power per se and more by local wealth, with deposit beta acting as a correlated proxy. This channel requires additional analysis and clarification as it is not fully clear to me whether deposit beta is the fundamental driver or partly a proxy for other factors like income. The paper could also benefit from providing case evidence based on specific bank decisions regarding branch expansion, such as recent expansions in branch networks by JP Morgan.
 
-<span style="color: #0d6b0d;">**Addressed (in part).** The “who is hurt or helped” dimension is addressed by heterogeneity in county-level mortgage and CRA lending: we interact closure and opening shares with low-income county and population-weighted LMI. See [Impact of branch restructuring on local deposit and credit markets](docs/impact-of-restructuring-02192026.html). Income in the closure/openings *decision* (break out Ln(income), exposition on de novo vs M&A) remains in the plan below.</span>
+<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+
+**✓ Addressed (in part).** The “who is hurt or helped” dimension is addressed by heterogeneity in county-level mortgage and CRA lending: we interact closure and opening shares with low-income county and population-weighted LMI. See [Impact of branch restructuring on local deposit and credit markets](impact-of-restructuring-02192026.html). Ln(income) has been broken out in the closings/openings models; see [Key closure results](key-closure-results.html).
+
+</div>
 
 > **PLAN TO ADDRESS COMMENT**
 >
-> - [ ] Break out Ln(income) as another variable in the closings/openings models.  As such, the predicted beta effect would be driven by HHI, share with high education, share with stock market participation and age dummies.  Doing this would help us address comment 3.  The plan is to break out Ln(income) in the 'second stage', not in the 'first stage'. That way the beta coefficient in the second stage is identified off the remaining demographic variation with income absorbing its own direct effect. Let me know if you had something different in mind.
+> - [X] Break out Ln(income) as another variable in the closings/openings models.  As such, the predicted beta effect would be driven by HHI, share with high education, share with stock market participation and age dummies.  Doing this would help us address comment 3.  The plan is to break out Ln(income) in the 'second stage', not in the 'first stage'. That way the beta coefficient in the second stage is identified off the remaining demographic variation with income absorbing its own direct effect. Let me know if you had something different in mind.
 > - [ ] PS to DR email: "This can be addressed with a better exposition. Frame entry as the choice between buying an existing branch (or branch network) via M&A v. De Novo entry. We are looking at de novo entry in our paper, and our results show that it is harder to enter markets this way when people are more rate-insensitive. I think a side prediction, which we don't test, is that entry into these areas will be more likely via M&A, because when a bank enters a market by buying an existing bank's branches, the deposits come with the branch, rather than having to be competed away from incumbents – we can test this Also, note that we are not saying banks enter unprofitable areas. We are just saying that if you want to collect deposits via de novo branching, at the margin it is easier to do that in high-beta areas. As long as beta < 1, you can still raise deposits profitably! The other high-level point to make is that our results reinforce the DSS claim that beta measures market power, since we show that low-beta is not just associated with high concentration and 'sticky' depositors (old, unsophisticated residents); such markets also have high entry barriers, making the profitability of their incumbent banks hard to compete away."
 
 ### **4. Importance of lending opportunities for branch closure and opening**

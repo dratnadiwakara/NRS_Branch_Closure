@@ -46,6 +46,7 @@ branch_sample[, new_branch := fifelse(yr == first_yr, 1L, 0L)]
 # County-year branch restructuring (align with ZIP logic: STCNTYBR = county)
 county_mkt <- branch_sample[, .(
   branches_county_curr   = uniqueN(UNINUMBR),
+  banks_county_curr      = uniqueN(RSSDID),
   total_deps_county_curr = sum(DEPSUMBR, na.rm = TRUE),
   n_closed_county_yr     = sum(closed, na.rm = TRUE),
   n_new_county_yr        = sum(new_branch, na.rm = TRUE),
@@ -55,6 +56,7 @@ county_mkt <- branch_sample[, .(
 
 setorder(county_mkt, STCNTYBR, yr)
 county_mkt[, branches_county_lag1   := shift(branches_county_curr,   1L, type = "lag"), by = STCNTYBR]
+county_mkt[, banks_county_lag1      := shift(banks_county_curr,      1L, type = "lag"), by = STCNTYBR]
 county_mkt[, total_deps_county_lag1 := shift(total_deps_county_curr, 1L, type = "lag"), by = STCNTYBR]
 county_mkt[, total_deps_county_lag3 := shift(total_deps_county_curr, 3L, type = "lag"), by = STCNTYBR]
 county_mkt[, county_growth_3yr := (total_deps_county_lag1 - total_deps_county_lag3) / total_deps_county_lag3]
@@ -88,10 +90,18 @@ for (y in 2000:2003) {
 hmda_county_yr <- hmda_bank[, .(mortgage_vol = sum(bank_county_mortgage_volume, na.rm = TRUE)),
                             by = .(county_code, year)]
 setorder(hmda_county_yr, county_code, year)
-hmda_county_yr[, mortgage_vol_lag1 := shift(mortgage_vol, 1L, type = "lag"), by = county_code]
-hmda_county_yr[, gr_mortgage_1yr := (mortgage_vol - mortgage_vol_lag1) / pmax(mortgage_vol_lag1, 1)]
 hmda_county_yr[, log_mortgage := log1p(mortgage_vol)]
-hmda_county_yr[, gr_mortgage_1yr := fifelse(is.finite(gr_mortgage_1yr), gr_mortgage_1yr, NA_real_)]
+# Create LEAD variables (future mortgage volume)
+hmda_county_yr[, mortgage_vol_lead1 := shift(mortgage_vol, 1L, type = "lead"), by = county_code]
+hmda_county_yr[, mortgage_vol_lead3 := shift(mortgage_vol, 3L, type = "lead"), by = county_code]
+
+# Growth from CURRENT to FUTURE (forward-looking)
+hmda_county_yr[, gr_mortgage_1yr_fwd := (mortgage_vol_lead1 - mortgage_vol) / pmax(mortgage_vol, 1)]
+hmda_county_yr[, gr_mortgage_3yr_fwd := (mortgage_vol_lead3 - mortgage_vol) / pmax(mortgage_vol, 1)]
+
+# Clean infinite values
+hmda_county_yr[, gr_mortgage_1yr_fwd := fifelse(is.finite(gr_mortgage_1yr_fwd), gr_mortgage_1yr_fwd, NA_real_)]
+hmda_county_yr[, gr_mortgage_3yr_fwd := fifelse(is.finite(gr_mortgage_3yr_fwd), gr_mortgage_3yr_fwd, NA_real_)]
 
 # Created by: external CRA processing (bank-county-year aggregation); read in create_closure_analysis_sample_02172026.R
 cra_bank <- readRDS(file.path(data_dir, "cra_bank_county_yr.rds"))
@@ -105,10 +115,15 @@ for (y in 2000:2003) {
 }
 cra_county_yr <- cra_bank[, .(cra_vol = sum(loan_amt, na.rm = TRUE)), by = .(county_code, year)]
 setorder(cra_county_yr, county_code, year)
-cra_county_yr[, cra_vol_lag1 := shift(cra_vol, 1L, type = "lag"), by = county_code]
-cra_county_yr[, gr_cra_1yr := (cra_vol - cra_vol_lag1) / pmax(cra_vol_lag1, 1)]
 cra_county_yr[, log_cra := log1p(cra_vol)]
-cra_county_yr[, gr_cra_1yr := fifelse(is.finite(gr_cra_1yr), gr_cra_1yr, NA_real_)]
+cra_county_yr[, cra_vol_lead1 := shift(cra_vol, 1L, type = "lead"), by = county_code]
+cra_county_yr[, cra_vol_lead3 := shift(cra_vol, 3L, type = "lead"), by = county_code]
+
+cra_county_yr[, gr_cra_1yr_fwd := (cra_vol_lead1 - cra_vol) / pmax(cra_vol, 1)]
+cra_county_yr[, gr_cra_3yr_fwd := (cra_vol_lead3 - cra_vol) / pmax(cra_vol, 1)]
+
+cra_county_yr[, gr_cra_1yr_fwd := fifelse(is.finite(gr_cra_1yr_fwd), gr_cra_1yr_fwd, NA_real_)]
+cra_county_yr[, gr_cra_3yr_fwd := fifelse(is.finite(gr_cra_3yr_fwd), gr_cra_3yr_fwd, NA_real_)]
 ```
 
 ```{r}
@@ -123,9 +138,13 @@ if ("YEAR" %in% names(county_controls)) setnames(county_controls, "YEAR", "year"
 
 # Start with county-year restructuring
 dt_county <- copy(county_mkt)
-dt_county <- merge(dt_county, hmda_county_yr[, .(county_code, year, mortgage_vol, log_mortgage, gr_mortgage_1yr, mortgage_vol_lag1)],
+dt_county <- merge(dt_county, hmda_county_yr[, .(county_code, year, mortgage_vol, log_mortgage,
+                                                gr_mortgage_1yr = gr_mortgage_1yr_fwd,
+                                                gr_mortgage_3yr = gr_mortgage_3yr_fwd)],
                   by = c("county_code", "year"), all.x = TRUE)
-dt_county <- merge(dt_county, cra_county_yr[, .(county_code, year, cra_vol, log_cra, gr_cra_1yr, cra_vol_lag1)],
+dt_county <- merge(dt_county, cra_county_yr[, .(county_code, year, cra_vol, log_cra,
+                                                gr_cra_1yr = gr_cra_1yr_fwd,
+                                                gr_cra_3yr = gr_cra_3yr_fwd)],
                   by = c("county_code", "year"), all.x = TRUE)
 dt_county <- merge(dt_county, county_controls,
                   by = c("county_code", "year"), all.x = TRUE)
@@ -137,16 +156,20 @@ ctrl_vars <- c("lag_county_deposit_gr", "lag_county_deposit_hhi", "lmi",
 ctrl_vars <- ctrl_vars[ctrl_vars %in% names(dt_county)]
 dt_county[, log_income_county := log1p(median_income_county_yr)]
 
-# Restrict sample: year range, minimum branches, non-missing key vars
-dt_county <- dt_county[year %in% SAMPLE_YEARS & branches_county_lag1 >= 2]
+# Restrict sample: year range, minimum branches, minimum banks, non-missing key vars
+
+
 dt_county[, fraction_of_branches_closed := Winsorize(fraction_of_branches_closed, quantile(fraction_of_branches_closed,probs = c(0, 0.99), na.rm = TRUE))]
 dt_county[, fraction_of_new_branches    := Winsorize(fraction_of_new_branches,   quantile(fraction_of_new_branches,probs = c(0, 0.99), na.rm = TRUE))]
 
 dt_county[, gr_mortgage_1yr := Winsorize(gr_mortgage_1yr, quantile(gr_mortgage_1yr,probs = c(0.01, 0.99), na.rm = TRUE))]
+dt_county[, gr_mortgage_3yr := Winsorize(gr_mortgage_3yr, quantile(gr_mortgage_3yr,probs = c(0.01, 0.99), na.rm = TRUE))]
 dt_county[, gr_cra_1yr    := Winsorize(gr_cra_1yr,   quantile(gr_cra_1yr,probs = c(0.01, 0.99), na.rm = TRUE))]
+dt_county[, gr_cra_3yr    := Winsorize(gr_cra_3yr,   quantile(gr_cra_3yr,probs = c(0.01, 0.99), na.rm = TRUE))]
 
 # LMI / income for heterogeneity
-dt_county[, low_income_county := fifelse(median_income_county_yr < median(median_income_county_yr, na.rm = TRUE), 1L, 0L),by=year]
+dt_county[,state:=substr(county_code,1,2)]
+dt_county[, low_income_county := fifelse(median_income_county_yr < median(median_income_county_yr, na.rm = TRUE), 1L, 0L),by=.(state,year)]
 dt_county[is.na(low_income_county), low_income_county := 0L]
 dt_county[, lmi_high := fifelse(pop_w_lmi > median(pop_w_lmi, na.rm = TRUE), 1L, 0L)]
 dt_county[is.na(lmi_high), lmi_high := 0L]
@@ -162,7 +185,7 @@ cat("County-year panel: ", nrow(dt_county), " observations.\n")
 
 setFixest_fml(
   ..fe       = ~ county_code + year,
-  ..controls = ~ log1p(branches_county_lag1)+county_growth_3yr+log1p(total_deps_county_lag1),
+  ..controls = ~ log1p(branches_county_lag1)+county_growth_3yr+log1p(total_deps_county_lag1) + log1p(banks_county_lag1),
   ..het_vars = ~ log_income_county
 )
 setFixest_etable(signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.1), se.below = TRUE)
@@ -174,8 +197,8 @@ setFixest_etable(signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.1), se.below
 # =============================================================================
 # PART 5: Heterogeneity by income and LMI (one table: baseline + interactions)
 # =============================================================================
-
-dt_full <- dt_county[year>=2004 & ! year %in% c(2008:2011,2020:2021)]
+# dt_county <- dt_county[year %in% SAMPLE_YEARS & branches_county_lag1 >= 5 & banks_county_lag1 >= 3]
+dt_full <- dt_county[year>=2004   & banks_county_lag1 >= 3] #& ! year %in% c(2008:2010,2020:2021)
 
 # dt_full[,small_openings:=ifelse(fraction_of_new_branches<0.1,1,0)]
 # dt_full[,small_closures:=ifelse(fraction_of_branches_closed<0.05,1,0)]
@@ -198,6 +221,18 @@ if ("lmi_high" %in% names(dt_county)) {
     data = dt_full, vcov = ~ county_code
   )
 }
+# Mortgage 3yr growth
+r_het[["Mtg 3yr (baseline)"]] <- feols(
+  gr_mortgage_3yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
+  data = dt_full, vcov = ~ county_code
+)
+if ("lmi_high" %in% names(dt_county)) {
+  r_het[["Mtg 3yr × LMI"]] <- feols(
+    gr_mortgage_3yr ~ (fraction_of_branches_closed + fraction_of_new_branches) * pop_w_lmi +
+      ..controls | ..fe,
+    data = dt_full, vcov = ~ county_code
+  )
+}
 
 # CRA: baseline (no interaction), then × low_income, then × LMI if available
 r_het[["CRA (baseline)"]] <- feols(
@@ -216,106 +251,21 @@ if ("lmi_high" %in% names(dt_county)) {
     data = dt_full, vcov = ~ county_code
   )
 }
+# CRA 3yr growth
+r_het[["CRA 3yr (baseline)"]] <- feols(
+  gr_cra_3yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
+  data = dt_full, vcov = ~ county_code
+)
+if ("lmi_high" %in% names(dt_county)) {
+  r_het[["CRA 3yr × LMI"]] <- feols(
+    gr_cra_3yr ~ (fraction_of_branches_closed + fraction_of_new_branches) * pop_w_lmi +
+      ..controls | ..fe,
+    data = dt_full, vcov = ~ county_code
+  )
+}
 
 # Single combined table (baseline + heterogeneity for mortgage and CRA)
 etable(r_het)
 ```
 
-```{r}
-# Does the "new branches hurt mortgages in LMI" effect only appear post-crisis?
-r_mtg_pre  <- feols(gr_mortgage_1yr ~ (fraction_of_branches_closed + 
-                    fraction_of_new_branches) * lmi_high + ..controls | ..fe,
-                    data = dt_county[year %in% 2000:2007], vcov = ~ county_code)
 
-r_mtg_post <- feols(gr_mortgage_1yr ~ (fraction_of_branches_closed + 
-                    fraction_of_new_branches) * lmi_high + ..controls | ..fe,
-                    data = dt_county[year %in% 2012:2019], vcov = ~ county_code)
-
-etable(r_mtg_pre, r_mtg_post)
-```
-
-
-
-```{r}
-# =============================================================================
-# PART 5b: Same heterogeneity table — year <= 2012
-# =============================================================================
-
-dt_pre2012 <- dt_county[year %in% SAMPLE_YEARS & year <= 2012]
-r_het_pre <- list()
-r_het_pre[["Mtg (baseline)"]] <- feols(
-  gr_mortgage_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
-  data = dt_pre2012, vcov = ~ county_code
-)
-r_het_pre[["Mtg × low income"]] <- feols(
-  gr_mortgage_1yr ~ (fraction_of_branches_closed + fraction_of_new_branches) * low_income_county +
-    ..controls | ..fe,
-  data = dt_pre2012, vcov = ~ county_code
-)
-if ("lmi_high" %in% names(dt_county)) {
-  r_het_pre[["Mtg × LMI"]] <- feols(
-    gr_mortgage_1yr ~ (fraction_of_branches_closed + fraction_of_new_branches) * lmi_high +
-      ..controls | ..fe,
-    data = dt_pre2012, vcov = ~ county_code
-  )
-}
-r_het_pre[["CRA (baseline)"]] <- feols(
-  gr_cra_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
-  data = dt_pre2012, vcov = ~ county_code
-)
-r_het_pre[["CRA × low income"]] <- feols(
-  gr_cra_1yr ~ (fraction_of_branches_closed + fraction_of_new_branches) * low_income_county +
-    ..controls | ..fe,
-  data = dt_pre2012, vcov = ~ county_code
-)
-if ("lmi_high" %in% names(dt_county)) {
-  r_het_pre[["CRA × LMI"]] <- feols(
-    gr_cra_1yr ~ (fraction_of_branches_closed + fraction_of_new_branches) * lmi_high +
-      ..controls | ..fe,
-    data = dt_pre2012, vcov = ~ county_code
-  )
-}
-etable(r_het_pre)
-```
-
-```{r}
-# =============================================================================
-# PART 5c: Same heterogeneity table — year > 2012
-# =============================================================================
-
-dt_post2012 <- dt_county[year %in% SAMPLE_YEARS & year > 2012]
-r_het_post <- list()
-r_het_post[["Mtg (baseline)"]] <- feols(
-  gr_mortgage_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
-  data = dt_post2012, vcov = ~ county_code
-)
-r_het_post[["Mtg × low income"]] <- feols(
-  gr_mortgage_1yr ~ (fraction_of_branches_closed + fraction_of_new_branches) * low_income_county +
-    ..controls | ..fe,
-  data = dt_post2012, vcov = ~ county_code
-)
-if ("lmi_high" %in% names(dt_county)) {
-  r_het_post[["Mtg × LMI"]] <- feols(
-    gr_mortgage_1yr ~ (fraction_of_branches_closed + fraction_of_new_branches) * lmi_high +
-      ..controls | ..fe,
-    data = dt_post2012, vcov = ~ county_code
-  )
-}
-r_het_post[["CRA (baseline)"]] <- feols(
-  gr_cra_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe,
-  data = dt_post2012, vcov = ~ county_code
-)
-r_het_post[["CRA × low income"]] <- feols(
-  gr_cra_1yr ~ (fraction_of_branches_closed + fraction_of_new_branches) * low_income_county +
-    ..controls | ..fe,
-  data = dt_post2012, vcov = ~ county_code
-)
-if ("lmi_high" %in% names(dt_county)) {
-  r_het_post[["CRA × LMI"]] <- feols(
-    gr_cra_1yr ~ (fraction_of_branches_closed + fraction_of_new_branches) * lmi_high +
-      ..controls | ..fe,
-    data = dt_post2012, vcov = ~ county_code
-  )
-}
-etable(r_het_post)
-```
