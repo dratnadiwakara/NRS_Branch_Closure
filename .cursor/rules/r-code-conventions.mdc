@@ -47,7 +47,7 @@ theme_custom <- function(base_size = 14) {
 ```
 
 ## 5. Export Standards (ggsave)
-- Location: All figures must be saved in the figures/ directory relative to the project root.
+- Location: All figures must be saved in the docs/figures/ directory (GitHub Pages).
 - Naming: Append the current date in mmddyyyy suffix (e.g., filename_02182026.png).
 - Format: Always set bg = "transparent" and provide explicit width and height dimensions.
 
@@ -59,7 +59,7 @@ dat_suffix <- format(Sys.Date(), "%m%d%Y")
 
 # Example Save
 ggsave(
-  filename = paste0("figures/plot_name_", dat_suffix, ".png"),
+  filename = paste0("docs/figures/plot_name_", dat_suffix, ".png"),
   plot = last_plot(),
   width = 8, 
   height = 6, 

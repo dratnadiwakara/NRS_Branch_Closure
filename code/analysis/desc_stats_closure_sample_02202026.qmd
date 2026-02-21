@@ -239,7 +239,7 @@ g <- ggplot(beta_density, aes(x = deposit_beta, fill = factor(large_bank))) +
 print(g)
 
 # Uncomment to save
-ggsave(file.path("../../figures/beta_density_bank.jpg"), g,
+ggsave(file.path("../../docs/figures/beta_density_bank.jpg"), g,
        width = 5, height = 3)
 ```
 
@@ -293,7 +293,7 @@ g <- ggplot(beta_density_branch, aes(x = deposit_beta, fill = factor(large_bank)
 print(g)
 
 # Uncomment to save
-ggsave(file.path( "../../figures/beta_density_branch.jpg"), g,
+ggsave(file.path( "../../docs/figures/beta_density_branch.jpg"), g,
        width = 5, height = 3)
 ```
 
@@ -332,7 +332,7 @@ g <- ggplot(temp[cycle1619 > 0.08 & cycle1619 < 0.4], aes(x = cycle1619, y = cyc
 print(g)
 
 # Uncomment to save
-ggsave(file.path( "../../figures/df_scatter_branch_mid_late.jpg"), g,
+ggsave(file.path( "../../docs/figures/df_scatter_branch_mid_late.jpg"), g,
        width = 4, height = 3.5)
 ```
 
@@ -368,7 +368,7 @@ g <- ggplot(temp, aes(x = cycle0406, y = cycle1619)) +
 print(g)
 
 # Uncomment to save
-ggsave(file.path( "../../figures/df_scatter_branch_early_mid.jpg"), g,
+ggsave(file.path( "../../docs/figures/df_scatter_branch_early_mid.jpg"), g,
        width = 4, height = 3.5)
 ```
 
@@ -422,7 +422,7 @@ g1 <- ggplot(beta_density_bank, aes(x = early, y = mid)) +
 print(g1)
 
 # Uncomment to save
-ggsave(file.path( "../../figures/df_scatter_bank_early_mid.jpg"), g1,
+ggsave(file.path( "../../docs/figures/df_scatter_bank_early_mid.jpg"), g1,
        width = 4, height = 3.5)
 ```
 
@@ -456,7 +456,7 @@ g2 <- ggplot(beta_density_bank, aes(x = mid, y = late)) +
 print(g2)
 
 # Uncomment to save
-ggsave(file.path("../../figures/df_scatter_bank_mid_late.jpg"), g2,
+ggsave(file.path("../../docs/figures/df_scatter_bank_mid_late.jpg"), g2,
        width = 4, height = 3.5)
 ```
 
@@ -508,7 +508,7 @@ g <- ggplot(temp, aes(x = beta_q, y = frac_branches_closed * 100, color = cycle)
 print(g)
 
 # Uncomment to save
-ggsave(file.path("../../figures/univar_branch_closure.jpg"), g,
+ggsave(file.path("../../docs/figures/univar_branch_closure.jpg"), g,
        width = 5, height = 3.5)
 ```
 

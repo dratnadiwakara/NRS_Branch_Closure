@@ -69,5 +69,5 @@ Descriptive statistics for small banks (CPI-adjusted assets < $100B). Same varia
 
 ## Univariate: Openings by Deposit Beta Decile
 
-![Pct of zip codes with new branches by deposit beta decile (within year), by cycle](../figures/univar_opening.png)
+![Pct of zip codes with new branches by deposit beta decile (within year), by cycle](figures/univar_opening.png)
 

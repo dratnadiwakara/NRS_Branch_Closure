@@ -83,11 +83,11 @@ Number of banks by size:
 
 - **Bank-level:** Density of deposit betas by bank size and cycle. Source: fig-beta-density-bank.
 
-![Bank-level deposit beta distribution by size and cycle](../figures/beta_density_bank.jpg)
+![Bank-level deposit beta distribution by size and cycle](figures/beta_density_bank.jpg)
 
 - **Branch-level:** Density of deposit betas at branch level by size and cycle. Source: fig-beta-density-branch.
 
-![Branch-level deposit beta distribution by size and cycle](../figures/beta_density_branch.jpg)
+![Branch-level deposit beta distribution by size and cycle](figures/beta_density_branch.jpg)
 
 ---
 
@@ -95,19 +95,19 @@ Number of banks by size:
 
 ### Branch-level: Mid Cycle vs Late Cycle
 
-![Branch-level deposit beta: Mid vs Late cycle](../figures/df_scatter_branch_mid_late.jpg)
+![Branch-level deposit beta: Mid vs Late cycle](figures/df_scatter_branch_mid_late.jpg)
 
 ### Branch-level: Early Cycle vs Mid Cycle
 
-![Branch-level deposit beta: Early vs Mid cycle](../figures/df_scatter_branch_early_mid.jpg)
+![Branch-level deposit beta: Early vs Mid cycle](figures/df_scatter_branch_early_mid.jpg)
 
 ### Bank-level: Early Cycle vs Mid Cycle
 
-![Bank-level deposit beta: Early vs Mid cycle](../figures/df_scatter_bank_early_mid.jpg)
+![Bank-level deposit beta: Early vs Mid cycle](figures/df_scatter_bank_early_mid.jpg)
 
 ### Bank-level: Mid Cycle vs Late Cycle
 
-![Bank-level deposit beta: Mid vs Late cycle](../figures/df_scatter_bank_mid_late.jpg)
+![Bank-level deposit beta: Mid vs Late cycle](figures/df_scatter_bank_mid_late.jpg)
 
 ---
 
@@ -115,7 +115,7 @@ Number of banks by size:
 
 Branch closure rates by deposit beta decile across cycles. Source: `code/analysis/desc_stats_closure_sample_02202026.qmd` (fig-univariate-beta-closure).
 
-![Branch closure rates by deposit beta decile across cycles](../figures/univar_branch_closure.jpg)
+![Branch closure rates by deposit beta decile across cycles](figures/univar_branch_closure.jpg)
 
 ---
 

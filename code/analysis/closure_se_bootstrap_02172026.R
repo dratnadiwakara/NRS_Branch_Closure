@@ -601,7 +601,7 @@ p <- ggplot(boot_dist, aes(x = coefficient)) +
 print(p)
 
 # Save plot
-ggsave(file.path("../../figures/bootstrap_distribution.png"), 
+ggsave(file.path("../../docs/figures/bootstrap_distribution.png"), 
        plot = p, width = 10, height = 6, dpi = 300)
 
 # ==============================================================================
