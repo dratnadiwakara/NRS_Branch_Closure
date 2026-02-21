@@ -168,9 +168,11 @@ Using RateWatch data where available would provide an important alternative sour
 ### **7. Other minor comments**
 - **Standard errors:** Given that deposit beta is itself estimated in a first stage and then used as a regressor in the branch closure and opening regressions, the reported standard errors do not account for this generated-regressor problem. The standard errors should therefore be bootstrapped (or otherwise adjusted) to properly reflect the additional estimation uncertainty.
 
-> **PLAN TO ADDRESS COMMENT**
->
-> - [ ] I can implement a bank-level bootstrap. The idea would be to randomly draw banks with replacement, repeat the full two-step estimation on each resampled dataset, and build the distribution of the coefficient of interest across iterations. The standard deviation of that distribution gives us the bootstrapped standard error. This should be straightforward to implement for the baseline results and we can do 500–1000 iterations to make sure the estimates are stable.
+<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+
+**✓ Addressed (in part).** Two-stage bank-level bootstrap for **closure** regressions. Bootstrap SE and 95% CI reported for large and small banks. See [Closure and openings bootstrap](closure_openings_bootstrap.html). The opening bootstrap is a placeholder; results to be added.
+
+</div>
 
 ## References
 - Benmelech, E., Yang, J. and Zator, M. (2023). *Bank branch density and bank runs* (No. w31462). National Bureau of Economic Research.

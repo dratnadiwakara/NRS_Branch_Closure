@@ -589,13 +589,11 @@ orig_estimates <- data.table(
 )
 
 p <- ggplot(boot_dist, aes(x = coefficient)) +
-  geom_histogram(bins = 50, fill = "steelblue", alpha = 0.7) +
+  geom_histogram(bins = 50, fill = "dodgerblue4", alpha = 0.7) +
   geom_vline(data = orig_estimates, aes(xintercept = estimate), 
              color = "red", linetype = "dashed", linewidth = 1) +
   facet_wrap(~bank_size, scales = "free") +
-  labs(title = "Bootstrap Distribution of Deposit Beta Coefficient",
-       subtitle = "Red dashed line shows point estimate from original regression\nBased on two-stage bootstrap with re-estimation of deposit beta models",
-       x = "Coefficient on Deposit Beta",
+  labs( x = "Coefficient on Deposit Beta",
        y = "Frequency") +
   theme_minimal() +
   theme(plot.title = element_text(face = "bold"))
@@ -603,7 +601,7 @@ p <- ggplot(boot_dist, aes(x = coefficient)) +
 print(p)
 
 # Save plot
-ggsave(file.path(data_dir, "bootstrap_distribution.png"), 
+ggsave(file.path("../../figures/bootstrap_distribution.png"), 
        plot = p, width = 10, height = 6, dpi = 300)
 
 # ==============================================================================
