@@ -88,6 +88,7 @@ More importantly, even if the evidence on branch closures is convincing, the pap
 
 **✓ Addressed (in part).** We quantify (i) how incumbent banks’ deposit growth in a ZIP responds to the fraction of branches closed and the fraction of new branches in that ZIP (how nearby branches are affected; deposit reallocation), and (ii) county-level mortgage and CRA lending growth following restructuring, with heterogeneity by low-income and high–LMI counties (“who is hurt or helped”).  See [Impact of branch restructuring on local deposit and credit markets](impact-of-restructuring-02192026.html) for results.
 
+> **PS (2/21/2026)**: I think we should not add lending as an outcome to the paper.  We already will have to fight the "identification police" for the results on spillovers - the negative coefficients in the last two periods for incumbent deposit growth are likely due to this problem.  The issue may be even worse for lending outcomes or real outcomes like SB employment growth.  The paper has so many results already.  It is focused on branch restructuring. I am happy to push back on Philipp's comment on this.  Not every banking paper has to look for credit effects or "real effects."   Also: it is not necessary to do everything suggested - it is our paper not theirs, despite what you may have heard.  (Also: If we do everything they ask but this, he won't reject us over it.  We can leave the door open to add it.)
 </div>
 
 > **PLAN TO ADDRESS COMMENT**
