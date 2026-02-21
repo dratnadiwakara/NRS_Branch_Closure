@@ -35,7 +35,7 @@ Below I list my comments. Some of these echo points raised by the referee:
 
 <div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
 
-**✓ Addressed.** We document (i) how incumbent branches’ deposit growth responds to the fraction of branches closed and new branches in the ZIP (deposit reallocation), ~~and (ii) county-level mortgage and CRA lending growth following branch restructuring, with heterogeneity by income and population-weighted LMI (“who is hurt”).~~ See <a href="NRS_Branch_Closure/impact-of-restructuring-02192026.html">Impact of branch restructuring on local deposit and credit markets</a> for results.
+**✓ Addressed.** We document (i) how incumbent branches’ deposit growth responds to the fraction of branches closed and new branches in the ZIP (deposit reallocation), <s>and (ii) county-level mortgage and CRA lending growth following branch restructuring, with heterogeneity by income and population-weighted LMI (“who is hurt”).</s> See <a href="NRS_Branch_Closure/impact-of-restructuring-02192026.html">Impact of branch restructuring on local deposit and credit markets</a> for results.
 
 </div>
 
@@ -86,7 +86,7 @@ More importantly, even if the evidence on branch closures is convincing, the pap
 
 <div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
 
-**✓ Addressed (in part).** We quantify (i) how incumbent banks’ deposit growth in a ZIP responds to the fraction of branches closed and the fraction of new branches in that ZIP (how nearby branches are affected; deposit reallocation), ~~and (ii) county-level mortgage and CRA lending growth following restructuring, with heterogeneity by low-income and high–LMI counties (“who is hurt or helped”).~~  See <a href="NRS_Branch_Closure/impact-of-restructuring-02192026.html">Impact of branch restructuring on local deposit and credit markets</a> for results.
+**✓ Addressed (in part).** We quantify (i) how incumbent banks’ deposit growth in a ZIP responds to the fraction of branches closed and the fraction of new branches in that ZIP (how nearby branches are affected; deposit reallocation), <s>and (ii) county-level mortgage and CRA lending growth following restructuring, with heterogeneity by low-income and high–LMI counties (“who is hurt or helped”).</s>  See <a href="NRS_Branch_Closure/impact-of-restructuring-02192026.html">Impact of branch restructuring on local deposit and credit markets</a> for results.
 <br/>
 <br/>
 </div>
@@ -133,7 +133,7 @@ In addition, evidence from the closure and opening regressions with local demogr
 
 <div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
 
-**~~✓ Addressed (in part).** The “who is hurt or helped” dimension is addressed by heterogeneity in county-level mortgage and CRA lending: we interact closure and opening shares with low-income county and population-weighted LMI. See <a href="NRS_Branch_Closure/impact-of-restructuring-02192026.html">Impact of branch restructuring on local deposit and credit markets</a>. Ln(income) has been broken out in the closings/openings models; see <a href="NRS_Branch_Closure/key-closure-results.html">Key closure results</a>.~~
+**<s>✓ Addressed (in part).** The “who is hurt or helped” dimension is addressed by heterogeneity in county-level mortgage and CRA lending: we interact closure and opening shares with low-income county and population-weighted LMI. See <a href="NRS_Branch_Closure/impact-of-restructuring-02192026.html">Impact of branch restructuring on local deposit and credit markets</a>. Ln(income) has been broken out in the closings/openings models; see <a href="NRS_Branch_Closure/key-closure-results.html">Key closure results</a>.</s>
 
 </div>
 
