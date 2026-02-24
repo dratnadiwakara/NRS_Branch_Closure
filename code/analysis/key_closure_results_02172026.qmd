@@ -40,6 +40,7 @@ data_dir <- "C:/OneDrive/data/nrs_branch_closure"
 # Load deposit beta results from three rate cycles
 # Data created by code/sample-construction/calculate_deposit_betas_02172026.R
 beta_cycles <- readRDS(file.path(data_dir, "deposit_beta_results_v02172026.rds"))
+
 ```
 
 # Data Preparation
@@ -49,90 +50,94 @@ beta_cycles <- readRDS(file.path(data_dir, "deposit_beta_results_v02172026.rds")
 
 
 ```{r}
-#| label: define-large-banks
-
-# Load CPI data for inflation adjustment
-# Source: FRED CPIAUCSL series
-# library(quantmod)
-# cpi <- getSymbols("CPIAUCSL",src="FRED",auto.assign = F)
-# cpi <- data.table(date=index(cpi),CPI=coredata(cpi))
-# cpi <- cpi %>% mutate(year=year(date)) %>%
-#        group_by(year) %>%
-#       summarize(CPI=last(CPI.CPIAUCSL)) %>% ungroup() %>% data.table()
-# saveRDS(cpi,"../data/cpi.rds")
-
-# Data: CPI from FRED (CPIAUCSL); see commented code above for construction
-cpi <- readRDS(file.path(data_dir, "cpi.rds"))
-cpi[, adj_ratio := CPI / CPI[year == 2024]]
-cpi[, asset_cutoff := adj_ratio * 100000000]
-
-# Get all bank-level data across cycles
-all_banks <- rbindlist(lapply(names(beta_cycles), function(cycle_name) {
-  dt <- copy(beta_cycles[[cycle_name]]$data)
-  dt[, cycle := cycle_name]
-  # Add year for each cycle (using end year)
-  dt[, year := ifelse(cycle == "cycle_0406", 2006,
-                     ifelse(cycle == "cycle_1619", 2019, 2023))]
-  return(dt)
-}))
-
-# Merge with CPI cutoffs
-all_banks <- merge(all_banks, cpi[, .(year, asset_cutoff)], by = "year", all.x = TRUE)
-
-# Define large banks
-large_banks <- unique(all_banks[bank_assets > asset_cutoff]$ID_RSSD)
-```
-
-## Prepare Branch Sample
-
-Load branch sample and calculate deposit betas using predictions from bank-level regressions:
-
-```{r}
 #| label: prepare-branch-sample
 
+# Cached prepared analytical sample (produced by this chunk)
+prepared_path <- file.path(data_dir, "branch_closure_analysis_sample_with_beta_02242026.rds")
 
-# Load branch-level data
-# Data created by code/sample-construction/create_closure_analysis_sample_02172026.R
-branch_sample <- readRDS(file.path(data_dir, "branch_closure_analysis_sample_02192026.rds"))
+if (file.exists(prepared_path)) {
+  branch_sample <- readRDS(prepared_path)
+  cat("Loaded prepared branch sample from cache:", prepared_path, "\n")
+} else {
 
-# Add large_bank indicator
-branch_sample[, large_bank := ifelse(RSSDID %in% large_banks, 1, 0)]
+  # Load CPI data for inflation adjustment
+  # Data: CPI from FRED (CPIAUCSL); see commented code in repo for construction
+  cpi <- readRDS(file.path(data_dir, "cpi.rds"))
+  cpi[, adj_ratio := CPI / CPI[year == 2024]]
+  cpi[, asset_cutoff := adj_ratio * 100000000]
 
-# Create factor variables needed for prediction
-branch_sample[, factor_age_bin := as.factor(age_bin)]
+  # Get all bank-level data across cycles
+  all_banks <- rbindlist(lapply(names(beta_cycles), function(cycle_name) {
+    dt <- copy(beta_cycles[[cycle_name]]$data)
+    dt[, cycle := cycle_name]
+    dt[, year := ifelse(cycle == "cycle_0406", 2006,
+                        ifelse(cycle == "cycle_1619", 2019, 2023))]
+    return(dt)
+  }))
+  all_banks <- merge(all_banks, cpi[, .(year, asset_cutoff)], by = "year", all.x = TRUE)
+  large_banks <- unique(all_banks[bank_assets > asset_cutoff]$ID_RSSD)
 
-# Predict deposit expense changes for each branch using each cycle's regression
-for(i in 1:length(beta_cycles)) {
-  cycle_nm <- names(beta_cycles)[i]
-  cycle_data <- beta_cycles[[cycle_nm]]$data
-  branch_sample[, pred_int_exp_chg := predict(beta_cycles[[i]]$reg, newdata = branch_sample)]
-  setnames(branch_sample, "pred_int_exp_chg", paste0("pred_int_exp_chg_", cycle_nm))
+  # Load branch-level data
+  # Data created by code/sample-construction/create_closure_analysis_sample_02172026.R
+  branch_sample <- readRDS(file.path(data_dir, "branch_closure_analysis_sample_02192026.rds"))
+
+  branch_sample[, large_bank := ifelse(RSSDID %in% large_banks, 1, 0)]
+  branch_sample[, factor_age_bin := as.factor(age_bin)]
+
+  for (i in 1:length(beta_cycles)) {
+    branch_sample[, pred_int_exp_chg := predict(beta_cycles[[i]]$reg, newdata = branch_sample)]
+    setnames(branch_sample, "pred_int_exp_chg", paste0("pred_int_exp_chg_", names(beta_cycles)[i]))
+  }
+
+  # Rate changes: 2004-06: 3.5pp, 2016-19: 2.5pp, 2022-23: 4.0pp
+  branch_sample[, deposit_beta := ifelse(yr <= 2014, pred_int_exp_chg_cycle_0406 / 3.5,
+                                         ifelse(yr <= 2019, pred_int_exp_chg_cycle_1619 / 2.5,
+                                                pred_int_exp_chg_cycle_2224 / 4))]
+
+  branch_sample[, rate_cycle := ifelse(yr >= 2004 & yr <= 2006, "1early",
+                                      ifelse(yr >= 2016 & yr <= 2019, "2mid",
+                                             ifelse(yr >= 2022 & yr <= 2023, "3late", NA)))]
+
+  branch_sample[, state_yr := paste0(substr(STCNTYBR, 1, 2), "_", yr)]
+  branch_sample[, county_yr := paste0(STCNTYBR, "_", yr)]
+  branch_sample[, bank_yr := paste0(RSSDID, "_", yr)]
+
+  saveRDS(branch_sample, prepared_path)
+  cat("Saved prepared objects to", prepared_path, "\n")
 }
-
-# Calculate deposit beta based on year and rate changes
-# Rate changes: 2004-06: 3.5pp, 2016-19: 2.5pp, 2022-23: 4.0pp
-branch_sample[, deposit_beta := ifelse(yr <= 2014, pred_int_exp_chg_cycle_0406 / 3.5,
-                                      ifelse(yr <= 2019, pred_int_exp_chg_cycle_1619 / 2.5,
-                                             pred_int_exp_chg_cycle_2224 / 4))]
-
-# Calculate deposit franchise value per dollar
-
-
-# Create rate cycle variable
-branch_sample[, rate_cycle := ifelse(yr >= 2004 & yr <= 2006, "1early",
-                                    ifelse(yr >= 2016 & yr <= 2019, "2mid",
-                                    ifelse(yr >= 2022 & yr <= 2023, "3late", NA)))]
-
-
-# Create fixed effect variables
-branch_sample[, state_yr := paste0(substr(STCNTYBR, 1, 2), "_", yr)]
-branch_sample[, county_yr := paste0(STCNTYBR, "_", yr)]
-branch_sample[, bank_yr := paste0(RSSDID, "_", yr)]
-
 
 cat("Branch sample prepared with", nrow(branch_sample), "observations\n")
 cat("Observations by rate cycle:\n")
 print(table(branch_sample$rate_cycle, useNA = "ifany"))
+```
+```{r}
+base_name <- sub("\\.rds$", "", prepared_path)
+num_parts <- 6
+
+file_info <- file.info(prepared_path)
+file_size <- file_info$size
+chunk_size <- ceiling(file_size / num_parts)
+
+# --- PART 1: SPLIT ---
+# Open the original file in Read Binary mode
+con_in <- file(prepared_path, "rb")
+
+part_files <- character(num_parts)
+for (i in 1:num_parts) {
+  part_files[i] <- paste0(base_name, "_part", i, ".rds")
+  
+  # Read the specific chunk of bytes
+  chunk_data <- readBin(con_in, what = "raw", n = chunk_size)
+  
+  # Write the chunk to a new part file
+  con_out <- file(part_files[i], "wb")
+  writeBin(chunk_data, con_out)
+  close(con_out)
+  
+  message("Created: ", part_files[i])
+}
+close(con_in)
+
 ```
 
 

@@ -166,9 +166,15 @@ The analysis relies on bank-level variation in interest expense on deposits, com
 
 Using RateWatch data where available would provide an important alternative source of variation and help assess whether the results are sensitive to the choice of beta construction. More broadly, the paper would be strengthened by validating the imputed deposit betas against realized betas constructed from RateWatch data where possible. Even if RateWatch is noisy or incomplete, showing that projected betas align with observed pricing behavior in overlapping samples would increase confidence in the beta measure and its economic interpretation.
 
+<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+
+**✓ Addressed.** We construct branch-level RateWatch deposit betas for 12‑month CDs (`12MCD10K`) and money market accounts (`MM25K`) over the 2016–2019 and 2022–2023 tightening cycles and compare them to our imputed branch-level deposit betas. Binned scatter plots show that where RateWatch data are available, branches with higher estimated betas also tend to have higher realized betas, indicating that the projected betas track actual pricing behavior in overlapping samples. See <a href="NRS_Branch_Closure/beta-ratewatch-validation.html">RateWatch validation of deposit betas</a> for details and figures.
+
+</div>
+
 > **PLAN TO ADDRESS COMMENT**
 >
-> - [ ] Scatter plot showing beta estimates align closely.
+> - [X] Scatter plots comparing estimated branch-level deposit betas to RateWatch-based betas, documented in <a href="NRS_Branch_Closure/beta-ratewatch-validation.html">RateWatch validation of deposit betas</a>.
 
 ### **7. Other minor comments**
 - **Standard errors:** Given that deposit beta is itself estimated in a first stage and then used as a regressor in the branch closure and opening regressions, the reported standard errors do not account for this generated-regressor problem. The standard errors should therefore be bootstrapped (or otherwise adjusted) to properly reflect the additional estimation uncertainty.
