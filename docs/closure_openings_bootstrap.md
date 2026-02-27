@@ -51,11 +51,13 @@ Same two-stage bootstrap procedure applied to **branch opening** regressions. Pl
 ### Comparison Table
 
 ```
-Bank_Size  Coefficient  SE_Clustered  SE_Bootstrap  CI_Lower  CI_Upper  N_Bootstrap  SE_Inflation  T_Stat_Original  T_Stat_Bootstrap
- Large      ...          ...           ...           ...       ...       ...          ...           ...               ...
- Small      ...          ...           ...           ...       ...       ...          ...           ...               ...
+   Bank_Size Coefficient SE_Clustered SE_Bootstrap   CI_Lower   CI_Upper N_Bootstrap
+      <char>       <num>        <num>        <num>      <num>      <num>       <int>
+1:     Large  0.07238350 0.0125368089  0.013544923 0.04480232 0.09609134         501
+2:     Small  0.01753918 0.0007871459  0.001520083 0.01357009 0.01968077         111
 ```
 
 ### Bootstrap Distribution
 
-*(Add figure when available: `figures/bootstrap_distribution_opening.png`)*
+![Bootstrap distribution of deposit beta coefficients by bank size](figures/bootstrap_distribution_opening.jpeg)
+
