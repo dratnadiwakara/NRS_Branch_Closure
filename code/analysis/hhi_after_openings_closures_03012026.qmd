@@ -1,0 +1,450 @@
+---
+title: "HHI After Openings and Closures"
+date: "2026-03-01"
+format:
+  html: default
+---
+
+```{r}
+# =============================================================================
+# Market concentration (HHI) after openings and closures
+#
+# Addresses referee/editor comment (response-plan.md §3): examine how closures
+# affect local market structure and competition. Outcome = change in ZIP-level
+# deposit HHI; design aligned with incumbent_chg_opening_closure_02182026_v2.qmd
+# (same ZIP-year panel, treatments, FE, controls, period splits).
+#
+# Structure:
+#   PART 0 – Libraries, paths, helpers
+#   PART 1 – Shared infrastructure (crosswalks, SOD load, OTS filter)
+#   PART 2 – Build ZIP-year panel + ZIP-year HHI, merge into dt_combined
+#   PART 3 – Formula definitions
+#   PART 4 – Regressions (delta_HHI_1yr on share_deps_closed, pred_share_opened)
+#   PART 5 – Cache and export
+# =============================================================================
+
+
+# =============================================================================
+# PART 0: Setup
+# =============================================================================
+
+rm(list = ls())
+
+library(data.table)
+library(fixest)
+library(DescTools)
+library(stringr)
+
+source("https://raw.githubusercontent.com/dratnadiwakara/r-utilities/refs/heads/main/summary_stat_tables.R")
+
+data_path <- "C:/OneDrive/data/nrs_branch_closure"
+# SOD: FDIC Summary of Deposits (external)
+sod_path  <- file.path("C:/OneDrive/data", "fdic_sod_2000_2025_simple.rds")
+
+SAMPLE_YEARS <- 2000:2024
+
+sum_na_safe <- function(x) {
+  if (all(is.na(x))) return(NA_real_)
+  as.numeric(sum(x, na.rm = TRUE))
+}
+```
+
+```{r}
+# =============================================================================
+# PART 1: Shared infrastructure
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# 1a. ZIP -> dominant county -> CBSA crosswalk
+# ---------------------------------------------------------------------------
+
+zip_county <- fread(file.path(data_path, "ZIP_COUNTY_092020.csv"))
+zip_county[, ZIP    := str_pad(ZIP,    5, "left", "0")]
+zip_county[, COUNTY := str_pad(COUNTY, 5, "left", "0")]
+setorder(zip_county, ZIP, -RES_RATIO)
+zip_county <- zip_county[!duplicated(ZIP), .(ZIP, COUNTY)]
+
+cbsa_county <- fread(file.path(data_path, "cbsa2fipsxw.csv"))
+cbsa_county[, county := paste0(str_pad(fipsstatecode,  2, "left", "0"),
+                               str_pad(fipscountycode, 3, "left", "0"))]
+cbsa_county <- unique(cbsa_county[, .(cbsacode, county)])
+cbsa_county <- cbsa_county[!duplicated(county)]
+
+zip_cbsa <- merge(zip_county, cbsa_county, by.x = "COUNTY", by.y = "county", all.x = TRUE)
+zip_cbsa <- unique(zip_cbsa[, .(ZIP, CBSA = cbsacode)], by = "ZIP")
+
+rm(cbsa_county)
+
+# ---------------------------------------------------------------------------
+# 1b. Demographics (created by create_zip_demographics_panel.R)
+# ---------------------------------------------------------------------------
+
+zip_demo <- readRDS(file.path(data_path, "zip_demographics_panel.rds"))
+setDT(zip_demo)
+zip_demo <- zip_demo[!is.na(zip), .(zip, yr, sophisticated, age_bin, median_income)]
+
+# ---------------------------------------------------------------------------
+# 1c. Load SOD, flag openings and closures, drop OTS transfer banks
+#     Data: FDIC Summary of Deposits (fdic_sod_2000_2025_simple.rds)
+# ---------------------------------------------------------------------------
+
+branch_data <- readRDS(sod_path)
+setDT(branch_data)
+if ("YEAR" %in% names(branch_data)) setnames(branch_data, "YEAR", "yr")
+if ("ZIPBR" %in% names(branch_data)) setnames(branch_data, "ZIPBR", "zip")
+branch_data[, zip := str_pad(zip, 5, "left", "0")]
+
+max_year <- max(branch_data$yr, na.rm = TRUE)
+setorder(branch_data, UNINUMBR, yr)
+
+branch_data[, new_branch := fifelse(is.na(shift(yr, 1L, type = "lag")),                  1L, 0L), by = UNINUMBR]
+branch_data[, closed     := fifelse(is.na(shift(yr, 1L, type = "lead")) & yr < max_year, 1L, 0L), by = UNINUMBR]
+
+branch_data <- branch_data[yr %in% SAMPLE_YEARS]
+
+# Drop OTS->FDIC transfer artifacts
+banks_with_openings  <- branch_data[new_branch == 1L & yr %in% 2004:2011,
+                                    .(has_opening = 1L), by = .(RSSDID, yr)]
+bank_opening_pattern <- dcast(banks_with_openings, RSSDID ~ yr,
+                              value.var = "has_opening", fill = 0L)
+ots_banks <- bank_opening_pattern[
+  `2004`==0 & `2005`==0 & `2006`==0 & `2007`==0 & `2008`==0 &
+  `2009`==0 & `2010`==0 & `2011`>0
+]$RSSDID
+branch_data <- branch_data[!RSSDID %in% ots_banks]
+rm(banks_with_openings, bank_opening_pattern, ots_banks)
+
+# Aligned deposits: lag-1 (for closure treatment) and lead-1
+branch_data[, `:=`(
+  dep_lag1_yr  = shift(yr,       1L, type = "lag"),
+  dep_lag1     = shift(DEPSUMBR, 1L, type = "lag"),
+  dep_lead1_yr = shift(yr,       1L, type = "lead"),
+  dep_lead1    = shift(DEPSUMBR, 1L, type = "lead")
+), by = UNINUMBR]
+
+branch_data[, dep_lag1_aligned  := fifelse(dep_lag1_yr  == yr - 1L, dep_lag1,  NA_real_)]
+branch_data[, dep_lead1_aligned := fifelse(dep_lead1_yr == yr + 1L, dep_lead1, NA_real_)]
+
+# Attach CBSA
+branch_data <- merge(branch_data, zip_cbsa, by.x = "zip", by.y = "ZIP", all.x = TRUE)
+setnames(branch_data, c("zip", "yr"), c("ZIPBR", "YEAR"))
+
+branch_data <- branch_data[, .(RSSDID, UNINUMBR, ZIPBR, YEAR, CBSA,
+                               DEPSUMBR, new_branch, closed,
+                               dep_lag1_aligned, dep_lead1_aligned)]
+```
+
+```{r}
+# =============================================================================
+# PART 2: Build ZIP-year panel (dt_combined) and ZIP-year HHI
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# 2a. Classify every bank-ZIP-year (INCUMBENT vs CHURNER)
+# ---------------------------------------------------------------------------
+
+bank_zip_type <- branch_data[, .(
+  n_open   = sum(new_branch, na.rm = TRUE),
+  n_closed = sum(closed,     na.rm = TRUE)
+), by = .(RSSDID, ZIPBR, YEAR)]
+
+bank_zip_type[, bank_type := fifelse(n_open > 0 | n_closed > 0, "CHURNER", "INCUMBENT")]
+
+branch_data <- merge(branch_data, bank_zip_type[, .(RSSDID, ZIPBR, YEAR, bank_type, n_open, n_closed)],
+                     by = c("RSSDID", "ZIPBR", "YEAR"))
+rm(bank_zip_type)
+
+# ---------------------------------------------------------------------------
+# 2b. ZIP-year market totals (denominator + controls)
+# ---------------------------------------------------------------------------
+
+zip_mkt <- branch_data[, .(
+  branches_zip_curr        = uniqueN(UNINUMBR),
+  total_deps_zip_curr      = sum(DEPSUMBR, na.rm = TRUE),
+  n_closed_zip_yr          = sum(closed, na.rm = TRUE),
+  n_new_zip_yr             = sum(new_branch, na.rm = TRUE),
+  total_closed_vol_zip_lag1 = sum_na_safe(fifelse(closed == 1L, dep_lag1_aligned, NA_real_))
+), by = .(ZIPBR, YEAR)]
+
+setorder(zip_mkt, ZIPBR, YEAR)
+zip_mkt[, branches_zip_lag1   := shift(branches_zip_curr,   1L, type = "lag"), by = ZIPBR]
+zip_mkt[, total_deps_zip_lag1 := shift(total_deps_zip_curr, 1L, type = "lag"), by = ZIPBR]
+zip_mkt[, total_deps_zip_lag3 := shift(total_deps_zip_curr, 3L, type = "lag"), by = ZIPBR]
+zip_mkt[, zip_growth_3yr := (total_deps_zip_lag1 - total_deps_zip_lag3) / total_deps_zip_lag3]
+zip_mkt[is.na(total_closed_vol_zip_lag1), total_closed_vol_zip_lag1 := 0]
+
+# ---------------------------------------------------------------------------
+# 2c. Predicted opening volume (bank×CBSA×year median with fallbacks)
+# ---------------------------------------------------------------------------
+
+existing <- branch_data[new_branch == 0L & !is.na(DEPSUMBR)]
+
+typ_b_cbsa_y <- existing[!is.na(CBSA),
+  .(typ_b_cbsa_y = as.numeric(quantile(DEPSUMBR, 0.5, na.rm = TRUE))),
+  by = .(RSSDID, CBSA, YEAR)]
+
+typ_b_y <- existing[,
+  .(typ_b_y = as.numeric(quantile(DEPSUMBR, 0.5, na.rm = TRUE))),
+  by = .(RSSDID, YEAR)]
+
+typ_cbsa_y <- existing[!is.na(CBSA),
+  .(typ_cbsa_y = as.numeric(quantile(DEPSUMBR, 0.5, na.rm = TRUE))),
+  by = .(CBSA, YEAR)]
+
+typ_y <- existing[,
+  .(typ_y = as.numeric(quantile(DEPSUMBR, 0.5, na.rm = TRUE))),
+  by = YEAR]
+
+rm(existing)
+
+branch_data <- merge(branch_data, typ_b_cbsa_y, by = c("RSSDID", "CBSA", "YEAR"), all.x = TRUE)
+branch_data <- merge(branch_data, typ_b_y,      by = c("RSSDID", "YEAR"),         all.x = TRUE)
+branch_data <- merge(branch_data, typ_cbsa_y,   by = c("CBSA", "YEAR"),           all.x = TRUE)
+branch_data <- merge(branch_data, typ_y,        by = "YEAR",                      all.x = TRUE)
+rm(typ_b_cbsa_y, typ_b_y, typ_cbsa_y, typ_y)
+
+branch_data[, typ_branch_dep := fifelse(!is.na(typ_b_cbsa_y), typ_b_cbsa_y,
+                                fifelse(!is.na(typ_b_y),       typ_b_y,
+                                fifelse(!is.na(typ_cbsa_y),    typ_cbsa_y, typ_y)))]
+
+branch_data[, pred_dep_new := fifelse(new_branch == 1L, typ_branch_dep, 0)]
+
+zip_open_vol <- branch_data[, .(
+  pred_open_vol_zip = sum(pred_dep_new, na.rm = TRUE)
+), by = .(ZIPBR, YEAR)]
+
+# ---------------------------------------------------------------------------
+# 2d. ZIP-year deposit HHI (from branch_data before collapsing)
+#
+# For each (ZIPBR, YEAR): sum DEPSUMBR by RSSDID, then HHI = sum(deposit_share^2).
+# Then lags/leads and delta_HHI_1yr = HHI_{t+1} - HHI_t.
+# ---------------------------------------------------------------------------
+
+bank_zip_dep <- branch_data[, .(bank_deposits = sum(DEPSUMBR, na.rm = TRUE)), by = .(RSSDID, ZIPBR, YEAR)]
+zip_totals   <- bank_zip_dep[, .(total_deposits = sum(bank_deposits)), by = .(ZIPBR, YEAR)]
+bank_zip_dep <- merge(bank_zip_dep, zip_totals, by = c("ZIPBR", "YEAR"))
+bank_zip_dep[, deposit_share := bank_deposits / total_deposits]
+
+zip_hhi <- bank_zip_dep[, .(hhi_zip_yr = sum(deposit_share^2)), by = .(ZIPBR, YEAR)]
+rm(bank_zip_dep, zip_totals)
+
+setorder(zip_hhi, ZIPBR, YEAR)
+zip_hhi[, hhi_lag1     := shift(hhi_zip_yr, 1L, type = "lag"),  by = ZIPBR]
+zip_hhi[, hhi_lead1    := shift(hhi_zip_yr, 1L, type = "lead"), by = ZIPBR]
+zip_hhi[, delta_HHI_1yr := hhi_lead1 - hhi_zip_yr]
+
+# ---------------------------------------------------------------------------
+# 2e. Incumbent aggregate deposits: current year and one-year-ahead
+# ---------------------------------------------------------------------------
+
+incumbent_agg <- branch_data[bank_type == "INCUMBENT" & RSSDID > 0, .(
+  bank_deps_curr  = sum_na_safe(DEPSUMBR),
+  bank_deps_lead1 = sum_na_safe(dep_lead1_aligned)
+), by = .(RSSDID, ZIPBR, YEAR)][, .(
+  incumbent_deps_curr  = sum_na_safe(bank_deps_curr),
+  incumbent_deps_lead1 = sum_na_safe(bank_deps_lead1),
+  n_incumbent_banks    = .N
+), by = .(ZIPBR, YEAR)]
+
+rm(branch_data)
+
+# ---------------------------------------------------------------------------
+# 2f. Merge into single ZIP-year table (including zip_hhi)
+# ---------------------------------------------------------------------------
+
+dt_combined <- Reduce(
+  function(x, y) merge(x, y, by = c("ZIPBR", "YEAR"), all.x = TRUE),
+  list(
+    incumbent_agg,
+    zip_mkt[, .(ZIPBR, YEAR, total_deps_zip_lag1, total_closed_vol_zip_lag1,
+                branches_zip_lag1, n_closed_zip_yr, n_new_zip_yr, zip_growth_3yr)],
+    zip_open_vol,
+    zip_hhi
+  )
+)
+rm(incumbent_agg, zip_mkt, zip_open_vol, zip_hhi)
+
+# ---------------------------------------------------------------------------
+# 2g. Treatments (common denominator = total_deps_zip_lag1)
+# ---------------------------------------------------------------------------
+
+dt_combined[total_deps_zip_lag1 > 0, `:=`(
+  share_deps_closed  = total_closed_vol_zip_lag1 / total_deps_zip_lag1,
+  pred_share_opened  = pred_open_vol_zip / total_deps_zip_lag1
+)]
+
+dt_combined[, `:=`(
+  fraction_of_branches_closed = n_closed_zip_yr / pmax(branches_zip_lag1, 1),
+  fraction_of_new_branches    = n_new_zip_yr / pmax(branches_zip_lag1, 1)
+)]
+
+dt_combined[is.na(share_deps_closed), share_deps_closed := 0]
+
+n_capped <- dt_combined[!is.na(pred_share_opened) & pred_share_opened > 1, .N]
+dt_combined[, pred_share_opened := pmin(pmax(pred_share_opened, 0, na.rm = TRUE), 1)]
+if (n_capped > 0) cat("pred_share_opened capped at 1 for", n_capped, "observations.\n")
+
+dt_combined[, zip_growth_3yr := fifelse(is.finite(zip_growth_3yr), zip_growth_3yr, NA_real_)]
+
+# ---------------------------------------------------------------------------
+# 2h. Winsorize treatments
+# ---------------------------------------------------------------------------
+
+dt_combined[, share_deps_closed := Winsorize(share_deps_closed,
+  val = quantile(share_deps_closed, c(0, 0.99), na.rm = TRUE))]
+dt_combined[, pred_share_opened := Winsorize(pred_share_opened,
+  val = quantile(pred_share_opened, c(0, 0.99), na.rm = TRUE))]
+
+# ---------------------------------------------------------------------------
+# 2i. Attach CBSA-year, county-year, demographics
+# ---------------------------------------------------------------------------
+
+dt_combined <- merge(dt_combined, zip_cbsa, by.x = "ZIPBR", by.y = "ZIP", all.x = TRUE)
+dt_combined[, cbsa_yr := paste(CBSA, YEAR)]
+
+dt_combined <- merge(dt_combined, zip_county, by.x = "ZIPBR", by.y = "ZIP", all.x = TRUE)
+dt_combined[, county_yr := paste(COUNTY, YEAR)]
+
+dt_combined <- merge(dt_combined, zip_demo,
+                     by.x = c("ZIPBR", "YEAR"), by.y = c("zip", "yr"), all.x = TRUE)
+dt_combined[, factor_age_bin := factor(age_bin)]
+dt_combined[, log_income     := log1p(median_income)]
+
+rm(zip_cbsa, zip_demo)
+
+# ---------------------------------------------------------------------------
+# 2j. Sample restrictions (same as incumbent_chg)
+# ---------------------------------------------------------------------------
+
+dt_combined <- dt_combined[
+  !is.na(sophisticated) &
+  branches_zip_lag1 >= 2 &
+  n_incumbent_banks >= 2
+]
+
+cat("Panel ready. Observations:", format(nrow(dt_combined), big.mark = ","),
+    "; with non-NA delta_HHI_1yr:", format(sum(!is.na(dt_combined$delta_HHI_1yr)), big.mark = ","), "\n")
+```
+
+```{r}
+# =============================================================================
+# PART 3: Formula definitions
+# =============================================================================
+
+setFixest_fml(
+  ..fe         = ~ ZIPBR + cbsa_yr,
+  ..fe_cty_yr  = ~ ZIPBR + county_yr,
+  ..controls   = ~ zip_growth_3yr
+)
+
+setFixest_etable(
+  signif.code = c("***" = 0.01, "**" = 0.05, "*" = 0.1),
+  se.below = TRUE
+)
+```
+
+
+
+
+```{r}
+# Branch-count treatments (fraction_of_branches_closed, fraction_of_new_branches) by period
+r_frac <- list()
+
+r_frac[["2000-2007"]] <- feols(
+  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  data = dt_combined[YEAR %in% 2000:2007], vcov = ~ZIPBR
+)
+
+r_frac[["2008-2011"]] <- feols(
+  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  data = dt_combined[YEAR %in% 2008:2011], vcov = ~ZIPBR
+)
+
+r_frac[["2012-2019"]] <- feols(
+  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  data = dt_combined[YEAR %in% 2012:2019], vcov = ~ZIPBR
+)
+
+r_frac[["2020-2024"]] <- feols(
+  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  data = dt_combined[YEAR %in% 2020:2024], vcov = ~ZIPBR
+)
+
+etable(r_frac, order = c("fraction_of_branches_closed", "fraction_of_new_branches"))
+```
+
+
+```{r}
+# =============================================================================
+# PART 4: Regressions — delta_HHI_1yr on closures and openings
+# =============================================================================
+
+r <- list()
+
+# Share-based treatments (share_deps_closed, pred_share_opened) by period
+r[["2000-2007"]] <- feols(
+  delta_HHI_1yr ~ share_deps_closed + pred_share_opened + ..controls | ..fe,
+  data = dt_combined[YEAR %in% 2000:2007], vcov = ~ZIPBR
+)
+
+r[["2008-2011"]] <- feols(
+  delta_HHI_1yr ~ share_deps_closed + pred_share_opened + ..controls | ..fe,
+  data = dt_combined[YEAR %in% 2008:2011], vcov = ~ZIPBR
+)
+
+r[["2012-2019"]] <- feols(
+  delta_HHI_1yr ~ share_deps_closed + pred_share_opened + ..controls | ..fe,
+  data = dt_combined[YEAR %in% 2012:2019], vcov = ~ZIPBR
+)
+
+r[["2020-2024"]] <- feols(
+  delta_HHI_1yr ~ share_deps_closed + pred_share_opened + ..controls | ..fe,
+  data = dt_combined[YEAR %in% 2020:2024], vcov = ~ZIPBR
+)
+
+etable(r, order = c("share_deps_closed", "pred_share_opened", "fraction_of_branches_closed", "fraction_of_new_branches"))
+```
+
+
+```{r}
+# Optional: level specification (HHI at t+1 with current HHI as control)
+r_level <- list()
+
+r_level[["2000-2007"]] <- feols(
+  hhi_lead1 ~ share_deps_closed + pred_share_opened + hhi_zip_yr + ..controls | ..fe,
+  data = dt_combined[YEAR %in% 2000:2007], vcov = ~ZIPBR
+)
+
+r_level[["2008-2011"]] <- feols(
+  hhi_lead1 ~ share_deps_closed + pred_share_opened + hhi_zip_yr + ..controls | ..fe,
+  data = dt_combined[YEAR %in% 2008:2011], vcov = ~ZIPBR
+)
+
+r_level[["2012-2019"]] <- feols(
+  hhi_lead1 ~ share_deps_closed + pred_share_opened + hhi_zip_yr + ..controls | ..fe,
+  data = dt_combined[YEAR %in% 2012:2019], vcov = ~ZIPBR
+)
+
+r_level[["2020-2024"]] <- feols(
+  hhi_lead1 ~ share_deps_closed + pred_share_opened + hhi_zip_yr + ..controls | ..fe,
+  data = dt_combined[YEAR %in% 2020:2024], vcov = ~ZIPBR
+)
+
+etable(r_level, order = c("share_deps_closed", "pred_share_opened", "hhi_zip_yr"))
+```
+
+```{r}
+# =============================================================================
+# PART 5: Cache and export
+# =============================================================================
+
+dat_suffix <- format(Sys.Date(), "%m%d%Y")
+
+# Cache panel for reuse
+saveRDS(dt_combined, paste0(data_path, "/hhi_openings_closures_panel_", dat_suffix, ".rds"))
+cat("Saved panel to hhi_openings_closures_panel_", dat_suffix, ".rds\n", sep = "")
+
+# Optional: save model list for tables
+saveRDS(list(share = r, fraction = r_frac, level = r_level),
+        paste0(data_path, "/hhi_openings_closures_models_", dat_suffix, ".rds"))
+```

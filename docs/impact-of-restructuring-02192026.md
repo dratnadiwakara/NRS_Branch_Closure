@@ -6,7 +6,7 @@ title: Impact of branch restructuring — NRS Branch Closure
 
 # Impact of Branch Restructuring on Local Deposit and Credit Markets
 
-This document gathers results on the broader implications of branch restructuring, addressing **editor comment 3** and the referee’s requests on contribution and lending (e.g. **referee.1**, **referee.3**): why closures and openings matter—how they reallocate deposits across nearby branches, alter local market structure and competition, and whether they spill over into credit supply. The first section quantifies deposit reallocation in a ZIP–year panel; the second section reports evidence on mortgage and small-business (CRA) lending. 
+This document gathers results on the broader implications of branch restructuring, addressing **editor comment 3** and the referee’s requests on contribution and lending (e.g. **referee.1**, **referee.3**): why closures and openings matter—how they reallocate deposits across nearby branches, alter local market structure and competition, and whether they spill over into credit supply. The first section quantifies deposit reallocation in a ZIP–year panel; the second section reports the effect of closures and openings on local market concentration (ZIP-level deposit HHI); the third section reports evidence on mortgage and small-business (CRA) lending. 
 
 
 ## 1. Deposit Reallocation Around Branch Closures and Openings
@@ -40,8 +40,35 @@ Within R2                      0.00333    0.00135    0.00171      0.00198    0.0
 Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
 ```
 
+## 2. Market Concentration (HHI) After Openings and Closures
+*Source: `code/analysis/hhi_after_openings_closures_03012026.qmd` (branch-count treatments, `r_frac`)*
 
-## 2. Impact on Mortgage and CRA Lending
+We regress the one-year change in ZIP-level deposit HHI (`delta_HHI_1yr` = HHI_{t+1} − HHI_t) on the fraction of branches closed and the fraction of new branches in the ZIP, with ZIP and county–year fixed effects and controls (past three-year deposit growth, log lagged branch count, log lagged incumbent bank count). Standard errors are clustered by ZIP. A positive coefficient on closures means concentration rises the year after more branches close; the coefficient on openings indicates whether entry raises or lowers concentration. Estimates are reported by subperiod.
+
+```
+                                2000-2007     2008-2011     2012-2019     2020-2024
+Dependent Var.:             delta_HHI_1yr delta_HHI_1yr delta_HHI_1yr delta_HHI_1yr
+                                                                                   
+fraction_of_branches_closed     0.1264***    0.1615***      0.2232***     0.2557***
+                               (0.0094)     (0.0104)       (0.0053)      (0.0076)  
+fraction_of_new_branches       -0.0168***   -0.0107**      -0.0302***    -0.0189** 
+                               (0.0031)     (0.0049)       (0.0047)      (0.0090)  
+zip_growth_3yr                  8.18e-6     -2.33e-5***    -3.27e-9      -0.0001*  
+                               (5.2e-6)     (6.76e-6)      (1.03e-6)     (7.35e-5) 
+Fixed-Effects:              ------------- ------------- ------------- -------------
+ZIPBR                                 Yes           Yes           Yes           Yes
+county_yr                             Yes           Yes           Yes           Yes
+___________________________ _____________ _____________ _____________ _____________
+S.E.: Clustered                 by: ZIPBR     by: ZIPBR     by: ZIPBR     by: ZIPBR
+Observations                       50,737        44,427        86,612        39,834
+R2                                0.37722       0.38563       0.35134       0.41770
+Within R2                         0.01634       0.02464       0.09457       0.11008
+---
+Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
+```
+
+
+## 3. Impact on Mortgage and CRA Lending
 *Source: `code/analysis/closure_credit_impacts_02192026.qmd`*
 
 We test whether areas that experience branch closures or net branch reductions see declines in mortgage origination (HMDA) or small-business lending (CRA), particularly for lower-income or underserved borrowers—addressing **editor comment 3**, **referee comment 1** (broader implications, downstream credit outcomes), and **referee comment 3** (who is hurt or helped by restructuring).
