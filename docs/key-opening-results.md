@@ -202,7 +202,7 @@ Within R2                            0.00336    0.00194        0.00088    0.0007
 
 Marginal effect of a one within–standard-deviation increase in deposit beta on opening probability, expressed as a percentage of the mean opening rate in each period. County–year and bank–year fixed effects (county spec). Large banks (blue) vs small banks (gold). Source: `code/analysis/key_opening_results_02202026.qmd` (tbl-marginal-effects-opening-by-regime, fig-opening-pct-of-mean-by-regime).
 
-![Marginal effect of deposit beta (one within-SD) on opening rate as % of mean, by period](figures/pct_of_mean_opening_by_regime_03012026.jpeg)
+<img src="figures/pct_of_mean_opening_by_regime_03012026.jpeg" alt="Marginal effect of deposit beta (one within-SD) on opening rate as % of mean, by period" width="600" style="height: auto;" />
 
 ---
 

@@ -36,7 +36,7 @@ This document collects results from the two-stage bootstrap that accounts for **
 
 ## Bootstrap Distribution
 
-![Bootstrap distribution of deposit beta coefficients by bank size](figures/bootstrap_beta_closures.jpeg)
+<img src="figures/bootstrap_beta_closures.jpeg" alt="Bootstrap distribution of deposit beta coefficients by bank size" width="600" style="height: auto;" />
 
 Bootstrap distributions of the deposit beta coefficient for large and small banks. Red dashed line: original point estimate. Histograms show the distribution across 500 two-stage bootstrap replications.
 
@@ -59,5 +59,5 @@ Same two-stage bootstrap procedure applied to **branch opening** regressions. Pl
 
 ### Bootstrap Distribution
 
-![Bootstrap distribution of deposit beta coefficients by bank size](figures/bootstrap_distribution_opening.jpeg)
+<img src="figures/bootstrap_distribution_opening.jpeg" alt="Bootstrap distribution of deposit beta coefficients by bank size" width="600" style="height: auto;" />
 

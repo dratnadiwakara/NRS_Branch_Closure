@@ -27,13 +27,13 @@ This page documents a robustness check that compares our **imputed branch-level 
 The figures below plot binned scatter diagrams of **RateWatch deposit betas** (vertical axis) against our **estimated deposit betas** (horizontal axis), separately for each tightening cycle. Each point is a bin of branches; the line shows the linear fit. The sample includes only banks whose 12‑month CD rate increased by at least 10 basis points during the cycle.
 
 ### 2004 - 2006
-![RateWatch versus estimated deposit betas, 2004–2006 cycle (sample: banks with 12M CD rate increase ≥ 10 bp)](figures/rw_beta_0406.jpeg)
+<img src="figures/rw_beta_0406.jpeg" alt="RateWatch versus estimated deposit betas, 2004–2006 cycle (sample: banks with 12M CD rate increase ≥ 10 bp)" width="600" style="height: auto;" />
 
 ### 2016 - 2019
-![RateWatch versus estimated deposit betas, 2016–2019 cycle (sample: banks with 12M CD rate increase ≥ 10 bp)](figures/rw_beta_1619.jpeg)
+<img src="figures/rw_beta_1619.jpeg" alt="RateWatch versus estimated deposit betas, 2016–2019 cycle (sample: banks with 12M CD rate increase ≥ 10 bp)" width="600" style="height: auto;" />
 
 ### 2022 - 2023
-![RateWatch versus estimated deposit betas, 2022–2023 cycle (sample: banks with 12M CD rate increase ≥ 10 bp)](figures/rw_beta_2223.jpeg)
+<img src="figures/rw_beta_2223.jpeg" alt="RateWatch versus estimated deposit betas, 2022–2023 cycle (sample: banks with 12M CD rate increase ≥ 10 bp)" width="600" style="height: auto;" />
 
 
 

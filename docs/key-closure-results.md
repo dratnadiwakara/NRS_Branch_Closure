@@ -158,7 +158,7 @@ Within R2                               0.01426    0.01395    0.01669    0.01620
 
 Marginal effect of a one within–standard-deviation increase in deposit beta on closure probability, expressed as a percentage of the mean closure rate in each period. County–year and bank–year fixed effects (county spec). Large banks (blue) vs small banks (gold). Source: `code/analysis/key_closure_results_02172026.qmd` (tbl-marginal-effects-by-regime, fig-pct-of-mean-by-regime).
 
-![Marginal effect of deposit beta (one within-SD) as % of mean closure rate, by period](figures/pct_of_mean_by_regime_03012026.jpeg)
+<img src="figures/pct_of_mean_by_regime_03012026.jpeg" alt="Marginal effect of deposit beta (one within-SD) as % of mean closure rate, by period" width="600" style="height: auto;" />
 
 ---
 
