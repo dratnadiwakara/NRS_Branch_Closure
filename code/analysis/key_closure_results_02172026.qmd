@@ -110,35 +110,6 @@ cat("Branch sample prepared with", nrow(branch_sample), "observations\n")
 cat("Observations by rate cycle:\n")
 print(table(branch_sample$rate_cycle, useNA = "ifany"))
 ```
-```{r}
-base_name <- sub("\\.rds$", "", prepared_path)
-num_parts <- 6
-
-file_info <- file.info(prepared_path)
-file_size <- file_info$size
-chunk_size <- ceiling(file_size / num_parts)
-
-# --- PART 1: SPLIT ---
-# Open the original file in Read Binary mode
-con_in <- file(prepared_path, "rb")
-
-part_files <- character(num_parts)
-for (i in 1:num_parts) {
-  part_files[i] <- paste0(base_name, "_part", i, ".rds")
-  
-  # Read the specific chunk of bytes
-  chunk_data <- readBin(con_in, what = "raw", n = chunk_size)
-  
-  # Write the chunk to a new part file
-  con_out <- file(part_files[i], "wb")
-  writeBin(chunk_data, con_out)
-  close(con_out)
-  
-  message("Created: ", part_files[i])
-}
-close(con_in)
-
-```
 
 
 # Deposit Beta Regressions
@@ -206,12 +177,12 @@ setFixest_fml(
                            lag_hmda_mtg_amt_gr + lag_cra_loan_amount_amt_lt_1m_gr + 
                            lag_establishment_gr + lag_payroll_gr + pop_w_lmi + 
                            log(lag_bank_county_mortgage_volume) + log(lag_bank_county_cra_volume) + 
-                           log1p(family_income)| state_yr + bank_yr,
+                           log(family_income)| state_yr + bank_yr,
   
   # County-level controls with simplified specification
   ..ctrl_county_closure = ~ log(lag_branch_deposit_amount) + same_zip_prior_3yr_branches + 
                             legacy_branch + log(lag_bank_county_mortgage_volume) + log(lag_bank_county_cra_volume) + 
-                           log1p(family_income)| county_yr + bank_yr
+                           log(family_income)| county_yr + bank_yr
 )
 
 ```
@@ -388,8 +359,113 @@ etable(
 # )
 ```
 
+```{r}
+#| label: tbl-marginal-effects-by-regime
+#| tbl-cap: "Marginal effects: one within-SD increase in deposit beta"
 
+# Reuse yr_range, closure_*_by_regime, branch_sample from chunk tbl-closure-by-regime.
+# Within-SD of deposit_beta (same logic as desc_stats: residual from county_yr + bank_yr FE).
+period_labels <- c("2001-07", "2008-11", "2012-19", "2020-23")
+me_rows <- list()
 
+for (i in seq_along(yr_range)) {
+  yrs <- yr_range[[i]]
+  for (large_val in c(1L, 0L)) {
+    sub <- copy(branch_sample[large_bank == large_val & yr %in% yrs & is.finite(deposit_beta)])
+    if (nrow(sub) == 0) next
+    reg_within <- feols(deposit_beta ~ 0 | county_yr + bank_yr, data = sub)
+    sub[, resid_beta := deposit_beta - predict(reg_within, newdata = sub)]
+    sd_within <- sd(sub$resid_beta, na.rm = TRUE)
+    mean_closure <- mean(sub$closed, na.rm = TRUE)
+
+    if (large_val == 1L) {
+      coef_county <- coefficients(closure_large_by_regime[[(i - 1L) * 2L + 2L]])["deposit_beta"]
+    } else {
+      coef_county <- coefficients(closure_small_by_regime[[(i - 1L) * 2L + 2L]])["deposit_beta"]
+    }
+
+    me_county_pp   <- 100 * coef_county * sd_within
+    pct_of_mean    <- if (mean_closure > 0) 100 * (coef_county * sd_within) / mean_closure else NA_real_
+
+    me_rows[[length(me_rows) + 1L]] <- data.table(
+      period_label = period_labels[i],
+      period_idx   = i,
+      bank_size    = if (large_val == 1L) "Large" else "Small",
+      sd_within    = sd_within,
+      mean_closure_pct = mean_closure * 100,
+      me_pp        = me_county_pp,
+      pct_of_mean  = pct_of_mean
+    )
+  }
+}
+
+me_by_regime <- rbindlist(me_rows)
+
+# Tables: one per bank size (county spec only)
+me_large <- me_by_regime[bank_size == "Large", .(
+  Period = period_label,
+  `Within-SD (beta)` = round(sd_within, 4),
+  `Mean closure (%)` = round(mean_closure_pct, 3),
+  `ME (pp)` = round(me_pp, 3),
+  `ME (% of mean)` = round(pct_of_mean, 1)
+)]
+me_small <- me_by_regime[bank_size == "Small", .(
+  Period = period_label,
+  `Within-SD (beta)` = round(sd_within, 4),
+  `Mean closure (%)` = round(mean_closure_pct, 3),
+  `ME (pp)` = round(me_pp, 3),
+  `ME (% of mean)` = round(pct_of_mean, 1)
+)]
+
+# Replace NaN/NA with "—" for display
+fmt_cell <- function(x) ifelse(is.na(x) | is.nan(x), "—", as.character(x))
+for (col in c("ME (pp)", "ME (% of mean)")) {
+  me_large[[col]] <- fmt_cell(me_large[[col]])
+  me_small[[col]] <- fmt_cell(me_small[[col]])
+}
+
+cat("Large banks — marginal effects (one within-SD increase in deposit beta, county spec):\n\n")
+knitr::kable(me_large, caption = NULL, align = c("l", rep("r", 4)))
+
+cat("\n\nSmall banks — marginal effects (one within-SD increase in deposit beta, county spec):\n\n")
+knitr::kable(me_small, caption = NULL, align = c("l", rep("r", 4)))
+```
+
+```{r}
+#| label: fig-pct-of-mean-by-regime
+#| fig-cap: "Marginal effect of deposit beta (one within-SD) as % of mean closure rate, by period"
+
+primary_blue <- "#012169"
+primary_gold <- "#f2a900"
+theme_custom <- function(base_size = 14) {
+  theme_minimal(base_size = base_size) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#012169"),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.background = element_rect(fill = "transparent", color = NA)
+  )
+}
+
+# Plot uses county-spec pct_of_mean (already in me_by_regime)
+ggplot(me_by_regime, aes(x = factor(period_label, levels = period_labels), y = pct_of_mean,
+                         colour = bank_size, group = bank_size)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  scale_colour_manual(values = c("Large" = primary_blue, "Small" = primary_gold)) +
+  labs(x = "Period", y = "ME as % of mean closure rate") +
+  theme_custom()
+
+dat_suffix <- format(Sys.Date(), "%m%d%Y")
+
+ggsave(
+  filename = paste0("../../docs/figures/pct_of_mean_by_regime_", dat_suffix, ".jpeg"),
+  plot = last_plot(),
+  width = 8,
+  height = 5
+)
+```
 
 ## Closures and Branch Usage (Pandemic Era)
 

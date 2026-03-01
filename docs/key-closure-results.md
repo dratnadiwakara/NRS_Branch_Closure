@@ -153,7 +153,16 @@ Within R2                               0.01426    0.01395    0.01669    0.01620
 ```
 
 ---
-## 4. Closures and Branch Usage (Pandemic Era)
+
+## 4. Marginal Effects by Period
+
+Marginal effect of a one within–standard-deviation increase in deposit beta on closure probability, expressed as a percentage of the mean closure rate in each period. County–year and bank–year fixed effects (county spec). Large banks (blue) vs small banks (gold). Source: `code/analysis/key_closure_results_02172026.qmd` (tbl-marginal-effects-by-regime, fig-pct-of-mean-by-regime).
+
+![Marginal effect of deposit beta (one within-SD) as % of mean closure rate, by period](figures/pct_of_mean_by_regime_03012026.jpeg)
+
+---
+
+## 5. Closures and Branch Usage (Pandemic Era)
 
 Branch closure regressions for 2020–2023 (pandemic era), adding branch-usage variables from SafeGraph/advan: drop in visits (change from 2019 to 2021) and log median distance from home. Odd columns: state–year + bank–year FE; even columns: county–year + bank–year FE. Panel A: full sample; Panel B: by bank size (large vs small). Columns 1–2: baseline (deposit beta + controls); columns 3–4: add usage variables. Standard errors clustered by bank. Source: `code/analysis/key_closure_results_02172026.qmd` (tbl-closure-usage).
 
@@ -211,28 +220,28 @@ Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
 
 ---
 
-## 5. Reduced Form: Demographics and Closures
+## 6. Reduced Form: Demographics and Closures
 
 Branch closure regressions replacing deposit beta with depositor demographics. Tests whether demographics directly predict closures without going through deposit beta. Columns 1–2: college frac, log income, stock market frac, age bins, county deposit HHI, population density; columns 3–4: replace college/stock market frac with sophisticated zipcode (combined education + stock market participation). Odd columns: state–year + bank–year FE; even columns: county–year + bank–year FE. Panel A: full sample; Panel B: by bank size. Standard errors clustered by bank. Source: `code/analysis/key_closure_results_02172026.qmd` (tbl-closure-reduced-form).
 
 Panel A: Full Sample
 ```
                                         model 1    model 2    model 3    model 4
-College frac                          0.0064***  0.0137***                      
+College frac                          0.0057**   0.0127***                      
                                      (0.0025)   (0.0023)                        
-Log(Income)                           0.5047***  0.4930***  0.2766***  0.2433***
-                                     (0.0726)   (0.0892)   (0.0624)   (0.0829)  
-Stock market frac                     0.0171***  0.0097***                      
+Log(Income)                          -0.0036*** -0.0044*** -0.0014*** -0.0019***
+                                     (0.0007)   (0.0006)   (0.0005)   (0.0005)  
+Stock market frac                     0.0166***  0.0093***                      
                                      (0.0037)   (0.0036)                        
-Age Q1-Q2                             0.0011*    0.0010*    0.0011*    0.0010*  
+Age Q1-Q2                             0.0010*    0.0009*    0.0010*    0.0010*  
                                      (0.0006)   (0.0005)   (0.0006)   (0.0006)  
-Age Q2-Q3                             0.0007     0.0008     0.0012     0.0014*  
+Age Q2-Q3                             0.0006     0.0007     0.0011     0.0013*  
                                      (0.0007)   (0.0006)   (0.0007)   (0.0007)  
-Age >Q3                               0.0007     0.0015*    0.0021**   0.0028***
+Age >Q3                               0.0006     0.0014*    0.0020**   0.0027***
                                      (0.0009)   (0.0008)   (0.0010)   (0.0010)  
-County deposit HHI                   -0.0067***            -0.0066***           
+County deposit HHI                   -0.0066***            -0.0065***           
                                      (0.0020)              (0.0021)             
-Population density                    0.0058***             0.0075***           
+Population density                    0.0057***             0.0074***           
                                      (0.0019)              (0.0020)             
 log(lag_branch_deposit_amount)       -0.0160*** -0.0158*** -0.0159*** -0.0156***
                                      (0.0006)   (0.0005)   (0.0006)   (0.0005)  
@@ -242,24 +251,22 @@ legacy_branch                        -0.0069*** -0.0068*** -0.0068*** -0.0067***
                                      (0.0012)   (0.0013)   (0.0012)   (0.0013)  
 lag_county_deposit_gr                 0.0013**              0.0015**            
                                      (0.0006)              (0.0006)             
-lag_hmda_mtg_amt_gr                  -0.0071***            -0.0074***           
+lag_hmda_mtg_amt_gr                  -0.0072***            -0.0074***           
                                      (0.0025)              (0.0024)             
 lag_cra_loan_amount_amt_lt_1m_gr     -0.0004               -0.0005              
                                      (0.0006)              (0.0006)             
-lag_establishment_gr                 -0.1236***            -0.1264***           
-                                     (0.0218)              (0.0232)             
-lag_payroll_gr                        0.0002                0.0032              
+lag_establishment_gr                 -0.1255***            -0.1275***           
+                                     (0.0219)              (0.0232)             
+lag_payroll_gr                        7.31e-5               0.0030              
                                      (0.0052)              (0.0052)             
-pop_w_lmi                            -0.0038***            -0.0044***           
+pop_w_lmi                            -0.0036***            -0.0043***           
                                      (0.0011)              (0.0011)             
 log(lag_bank_county_mortgage_volume) -0.0004    -0.0006*   -0.0004    -0.0006** 
                                      (0.0003)   (0.0003)   (0.0003)   (0.0003)  
 log(lag_bank_county_cra_volume)      -0.0005    -0.0007**  -0.0005*   -0.0008** 
                                      (0.0003)   (0.0004)   (0.0003)   (0.0004)  
-log1p(family_income)                 -0.5090*** -0.4982*** -0.2784*** -0.2456***
-                                     (0.0732)   (0.0896)   (0.0629)   (0.0832)  
-Sophisticated zipcode                                       0.0023***  0.0024***
-                                                           (0.0006)   (0.0005)  
+Sophisticated zipcode                                       0.0022***  0.0023***
+                                                           (0.0005)   (0.0005)  
 Fixed-Effects:                       ---------- ---------- ---------- ----------
 state_yr                                    Yes         No        Yes         No
 bank_yr                                     Yes        Yes        Yes        Yes
@@ -267,8 +274,8 @@ county_yr                                    No        Yes         No        Yes
 ____________________________________ __________ __________ __________ __________
 S.E.: Clustered                      by: RSSDID by: RSSDID by: RSSDID by: RSSDID
 Observations                          1,735,826  1,802,203  1,735,826  1,802,203
-R2                                      0.09464    0.12534    0.09451    0.12522
-Within R2                               0.01401    0.01340    0.01387    0.01327
+R2                                      0.09462    0.12532    0.09451    0.12521
+Within R2                               0.01399    0.01338    0.01386    0.01326
 ---
 Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
 ```
@@ -278,23 +285,23 @@ Panel B: By Size
                                          model 1     model 2     model 3     model 4     model 5     model 6     model 7     model 8
                                      Large Banks Large Banks Large Banks Large Banks Small Banks Small Banks Small Banks Small Banks
                                                                                                                                     
-College frac                           0.0043      0.0119***   0.0098***   0.0168***                                                
-                                      (0.0047)    (0.0040)    (0.0022)    (0.0028)                                                  
-Log(Income)                            0.8552***   0.6822***   0.2701***   0.3417***   0.4628***   0.2658*     0.1485**    0.1953** 
-                                      (0.1326)    (0.1832)    (0.0684)    (0.0811)    (0.1032)    (0.1499)    (0.0675)    (0.0792)  
-Stock market frac                      0.0354***   0.0299***  -0.0019     -0.0090**                                                 
+College frac                           0.0034      0.0107**    0.0093***   0.0161***                                                
+                                      (0.0048)    (0.0040)    (0.0022)    (0.0027)                                                  
+Log(Income)                           -0.0062***  -0.0066***  -0.0019***  -0.0032***  -0.0027***  -0.0028***  -0.0005     -0.0014***
+                                      (0.0011)    (0.0010)    (0.0005)    (0.0006)    (0.0008)    (0.0008)    (0.0005)    (0.0005)  
+Stock market frac                      0.0344***   0.0292***  -0.0021     -0.0092**                                                 
                                       (0.0044)    (0.0047)    (0.0032)    (0.0036)                                                  
-Age Q1-Q2                              0.0030***   0.0025***  -0.0003     -0.0004      0.0030***   0.0026***  -0.0006     -0.0006   
+Age Q1-Q2                              0.0028***   0.0024***  -0.0004     -0.0005      0.0029***   0.0025***  -0.0006     -0.0006   
                                       (0.0007)    (0.0006)    (0.0004)    (0.0005)    (0.0007)    (0.0007)    (0.0004)    (0.0005)  
-Age Q2-Q3                              0.0027**    0.0020**   -0.0007     -0.0005      0.0038***   0.0034***  -0.0009*    -0.0008   
+Age Q2-Q3                              0.0025**    0.0019**   -0.0008     -0.0007      0.0038***   0.0034***  -0.0010*    -0.0008   
                                       (0.0010)    (0.0008)    (0.0006)    (0.0007)    (0.0011)    (0.0009)    (0.0006)    (0.0006)  
-Age >Q3                                0.0030**    0.0029**   -0.0008     -2.47e-5     0.0064***   0.0065***  -0.0009     -0.0002   
-                                      (0.0014)    (0.0012)    (0.0008)    (0.0008)    (0.0014)    (0.0013)    (0.0008)    (0.0008)  
-County deposit HHI                     0.0009                 -0.0102***               0.0027                 -0.0106***            
+Age >Q3                                0.0030**    0.0028**   -0.0008     -0.0001      0.0063***   0.0064***  -0.0009     -0.0003   
+                                      (0.0014)    (0.0012)    (0.0008)    (0.0008)    (0.0014)    (0.0013)    (0.0007)    (0.0008)  
+County deposit HHI                     0.0010                 -0.0102***               0.0027                 -0.0106***            
                                       (0.0036)                (0.0019)                (0.0036)                (0.0019)              
-Population density                     0.0002                  0.0110***               0.0016                  0.0127***            
+Population density                     7.26e-5                 0.0109***               0.0014                  0.0126***            
                                       (0.0033)                (0.0017)                (0.0035)                (0.0017)              
-log(lag_branch_deposit_amount)        -0.0192***  -0.0186***  -0.0142***  -0.0141***  -0.0187***  -0.0182***  -0.0142***  -0.0141***
+log(lag_branch_deposit_amount)        -0.0191***  -0.0186***  -0.0142***  -0.0141***  -0.0187***  -0.0182***  -0.0142***  -0.0141***
                                       (0.0011)    (0.0010)    (0.0005)    (0.0005)    (0.0011)    (0.0010)    (0.0005)    (0.0005)  
 same_zip_prior_3yr_branches            0.0454***   0.0404***   0.0498***   0.0472***   0.0458***   0.0410***   0.0499***   0.0474***
                                       (0.0102)    (0.0107)    (0.0071)    (0.0069)    (0.0102)    (0.0107)    (0.0071)    (0.0069)  
@@ -304,21 +311,19 @@ lag_county_deposit_gr                  0.0027**                0.0008           
                                       (0.0013)                (0.0006)                (0.0014)                (0.0006)              
 lag_hmda_mtg_amt_gr                   -0.0058                 -0.0066***              -0.0063                 -0.0066***            
                                       (0.0050)                (0.0022)                (0.0050)                (0.0022)              
-lag_cra_loan_amount_amt_lt_1m_gr      -0.0006                  0.0002                 -0.0009                  0.0002               
+lag_cra_loan_amount_amt_lt_1m_gr      -0.0007                  0.0002                 -0.0009                  0.0002               
                                       (0.0020)                (0.0005)                (0.0019)                (0.0005)              
-lag_establishment_gr                  -0.2227***              -0.0564***              -0.2417***              -0.0533***            
-                                      (0.0464)                (0.0173)                (0.0490)                (0.0175)              
-lag_payroll_gr                        -0.0117                  0.0084                 -0.0039                  0.0094               
+lag_establishment_gr                  -0.2258***              -0.0575***              -0.2430***              -0.0539***            
+                                      (0.0465)                (0.0174)                (0.0489)                (0.0175)              
+lag_payroll_gr                        -0.0119                  0.0083                 -0.0042                  0.0093               
                                       (0.0101)                (0.0059)                (0.0102)                (0.0059)              
-pop_w_lmi                             -0.0061***              -0.0020*                -0.0072***              -0.0019*              
+pop_w_lmi                             -0.0057**               -0.0019*                -0.0070***              -0.0018*              
                                       (0.0022)                (0.0011)                (0.0020)                (0.0011)              
 log(lag_bank_county_mortgage_volume)  -0.0007      0.0004     -0.0004     -0.0007***  -0.0005      0.0003     -0.0003     -0.0007***
                                       (0.0008)    (0.0011)    (0.0002)    (0.0002)    (0.0007)    (0.0011)    (0.0002)    (0.0002)  
-log(lag_bank_county_cra_volume)        0.0008      0.0011     -0.0007***  -0.0008***   0.0007      0.0010     -0.0007***  -0.0008***
+log(lag_bank_county_cra_volume)        0.0008      0.0011     -0.0007***  -0.0008***   0.0007      0.0010     -0.0007***  -0.0009***
                                       (0.0006)    (0.0008)    (0.0003)    (0.0003)    (0.0006)    (0.0008)    (0.0003)    (0.0003)  
-log1p(family_income)                  -0.8624***  -0.6899***  -0.2724***  -0.3455***  -0.4659***  -0.2690*    -0.1493**   -0.1970** 
-                                      (0.1334)    (0.1839)    (0.0688)    (0.0814)    (0.1039)    (0.1504)    (0.0679)    (0.0795)  
-Sophisticated zipcode                                                                  0.0044***   0.0050***   0.0004      0.0006   
+Sophisticated zipcode                                                                  0.0042***   0.0049***   0.0004      0.0005   
                                                                                       (0.0009)    (0.0006)    (0.0004)    (0.0005)  
 Fixed-Effects:                        ----------  ----------  ----------  ----------  ----------  ----------  ----------  ----------
 state_yr                                     Yes          No         Yes          No         Yes          No         Yes          No
@@ -327,8 +332,8 @@ county_yr                                     No         Yes          No        
 ____________________________________  __________  __________  __________  __________  __________  __________  __________  __________
 S.E.: Clustered                       by: RSSDID  by: RSSDID  by: RSSDID  by: RSSDID  by: RSSDID  by: RSSDID  by: RSSDID  by: RSSDID
 Observations                             682,236     698,499   1,053,588   1,090,424     682,236     698,499   1,053,588   1,090,424
-R2                                       0.04900     0.09708     0.14338     0.19442     0.04869     0.09679     0.14334     0.19437
-Within R2                                0.01423     0.01288     0.01461     0.01408     0.01390     0.01257     0.01457     0.01401
+R2                                       0.04897     0.09706     0.14337     0.19442     0.04868     0.09679     0.14334     0.19437
+Within R2                                0.01419     0.01286     0.01461     0.01407     0.01389     0.01256     0.01457     0.01401
 ---
 Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
 ```

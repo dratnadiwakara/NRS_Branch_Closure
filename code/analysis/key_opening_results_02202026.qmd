@@ -100,11 +100,11 @@ setFixest_fml(
   ..ctrl_state_opening = ~ log_zip_deposits + lag_county_deposit_gr + 
                           lag_hmda_mtg_amt_gr + lag_cra_loan_amount_amt_lt_1m_gr + 
                           lag_establishment_gr + lag_payroll_gr + lmi +
-                          log1p(lag_county_cra_volume)+log1p(lag_county_mortgage_volume) + log1p(family_income)| 
+                          log1p(lag_county_cra_volume)+log1p(lag_county_mortgage_volume) + log(family_income)| 
                           state_yr + bank_yr,
   
   # County-level controls (more parsimonious with county-year FE)
-  ..ctrl_county_opening = ~ log_zip_deposits  + log1p(family_income) | county_yr + bank_yr
+  ..ctrl_county_opening = ~ log_zip_deposits  + log(family_income) | county_yr + bank_yr
 )
 
 # Create coefficient labels dictionary
@@ -259,7 +259,7 @@ etable(opening_large_by_cycle,
   depvar = FALSE,
   order = c("Deposit Beta")
 )
-rm(opening_large_by_cycle)
+# Keep opening_large_by_cycle for marginal-effects chunk below
 gc(verbose = FALSE)
 
 # LaTeX (uncomment to use):
@@ -311,7 +311,7 @@ etable(opening_small_by_cycle,
   depvar = FALSE,
   order = c("Deposit Beta","log(Zip Deposits)","log(Income)","log(Lag County CRA Volume)","log(Lag County Mortgage Volume)")
 )
-rm(opening_small_by_cycle)
+# Keep opening_small_by_cycle for marginal-effects chunk below
 gc(verbose = FALSE)
 
 # LaTeX (uncomment to use):
@@ -337,6 +337,89 @@ cat("2001-2007:", sprintf("%.6f", mean(opening_sample[large_bank == 0 & yr %in% 
 cat("2008-2011:", sprintf("%.6f", mean(opening_sample[large_bank == 0 & yr %in% yr_range[[2]]]$new_branch_zip, na.rm = TRUE)), "\n")
 cat("2012-2019:", sprintf("%.6f", mean(opening_sample[large_bank == 0 & yr %in% yr_range[[3]]]$new_branch_zip, na.rm = TRUE)), "\n")
 cat("2020-2023:", sprintf("%.6f", mean(opening_sample[large_bank == 0 & yr %in% yr_range[[4]]]$new_branch_zip, na.rm = TRUE)), "\n")
+```
+
+```{r}
+#| label: tbl-marginal-effects-opening-by-regime
+#| message: false
+#| warning: false
+
+# Marginal effects: one within-SD increase in deposit beta (county spec), same logic as closure ME.
+# Ensure county_yr and bank_yr exist for within-SD regression
+if (!("county_yr" %in% names(opening_sample))) opening_sample[, county_yr := paste(COUNTY, yr)]
+if (!("bank_yr" %in% names(opening_sample))) opening_sample[, bank_yr := paste(RSSDID, yr)]
+
+period_labels <- c("2001-07", "2008-11", "2012-19", "2020-23")
+me_opening_rows <- list()
+
+for (i in seq_along(yr_range)) {
+  yrs <- yr_range[[i]]
+  for (large_val in c(1L, 0L)) {
+    sub <- copy(opening_sample[large_bank == large_val & yr %in% yrs & is.finite(deposit_beta)])
+    if (nrow(sub) == 0) next
+    reg_within <- feols(deposit_beta ~ 0 | county_yr + bank_yr, data = sub)
+    sub[, resid_beta := deposit_beta - predict(reg_within, newdata = sub)]
+    sd_within <- sd(sub$resid_beta, na.rm = TRUE)
+    mean_open <- mean(sub$new_branch_zip, na.rm = TRUE)
+
+    if (large_val == 1L) {
+      coef_county <- coefficients(opening_large_by_cycle[[(i - 1L) * 2L + 2L]])["deposit_beta"]
+    } else {
+      coef_county <- coefficients(opening_small_by_cycle[[(i - 1L) * 2L + 2L]])["deposit_beta"]
+    }
+
+    me_pp      <- 100 * coef_county * sd_within
+    pct_of_mean <- if (mean_open > 0) 100 * (coef_county * sd_within) / mean_open else NA_real_
+
+    me_opening_rows[[length(me_opening_rows) + 1L]] <- data.table(
+      period_label = period_labels[i],
+      period_idx   = i,
+      bank_size    = if (large_val == 1L) "Large" else "Small",
+      pct_of_mean  = pct_of_mean
+    )
+  }
+}
+
+me_opening_by_regime <- rbindlist(me_opening_rows)
+rm(opening_large_by_cycle, opening_small_by_cycle)
+gc(verbose = FALSE)
+```
+
+```{r}
+#| label: fig-opening-pct-of-mean-by-regime
+#| fig-cap: "Marginal effect of deposit beta (one within-SD) on opening rate as % of mean, by period"
+#| message: false
+#| warning: false
+
+primary_blue <- "#012169"
+primary_gold <- "#f2a900"
+theme_custom <- function(base_size = 14) {
+  theme_minimal(base_size = base_size) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#012169"),
+    legend.position = "bottom",
+    legend.title = element_blank(),
+    plot.background = element_rect(fill = "transparent", color = NA),
+    panel.background = element_rect(fill = "transparent", color = NA)
+  )
+}
+
+ggplot(me_opening_by_regime, aes(x = factor(period_label, levels = period_labels), y = pct_of_mean,
+                                 colour = bank_size, group = bank_size)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  scale_colour_manual(values = c("Large" = primary_blue, "Small" = primary_gold)) +
+  labs(x = "Period", y = "ME as % of mean opening rate") +
+  theme_custom()
+
+dat_suffix <- format(Sys.Date(), "%m%d%Y")
+ggsave(
+  filename = paste0("../../docs/figures/pct_of_mean_opening_by_regime_", dat_suffix, ".png"),
+  plot = last_plot(),
+  width = 8,
+  height = 6,
+  bg = "transparent"
+)
 ```
 
 # Reduced Form Pooled Opening Model

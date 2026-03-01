@@ -135,72 +135,78 @@ College frac                     0.0039***  0.0042***
 Stock market frac                0.0011***  0.0010***                      
                                 (0.0003)   (0.0002)                        
 Sophisticated zipcode                                  0.0014***  0.0013***
-                                                      (7.59e-5)  (7.79e-5) 
+                                                      (7.6e-5)   (7.79e-5) 
 log(Zip Deposits)                0.0003***  0.0003***  0.0003***  0.0003***
                                 (1.85e-5)  (1.83e-5)  (1.87e-5)  (1.85e-5) 
 Age Q1-Q2                       -0.0004*** -0.0003*** -0.0005*** -0.0004***
-                                (6.57e-5)  (6.06e-5)  (6.92e-5)  (6.4e-5)  
+                                (6.57e-5)  (6.06e-5)  (6.92e-5)  (6.39e-5) 
 Age Q2-Q3                       -0.0008*** -0.0007*** -0.0009*** -0.0008***
-                                (9.42e-5)  (8.73e-5)  (9.37e-5)  (8.77e-5) 
+                                (9.41e-5)  (8.73e-5)  (9.37e-5)  (8.77e-5) 
 Age >Q3                         -0.0011*** -0.0011*** -0.0011*** -0.0010***
                                 (0.0001)   (0.0001)   (0.0001)   (0.0001)  
 County deposit HHI              -0.0014***            -0.0010***           
                                 (0.0002)              (0.0002)             
 Population density              -0.0011***            -0.0007***           
                                 (0.0002)              (0.0003)             
-log(Income)                     -0.0003*** -0.0004*** -4.73e-6   -1.06e-5  
-                                (4.16e-5)  (3.26e-5)  (4.38e-5)  (3.6e-5)  
+log(Income)                     -0.0003*** -0.0004*** -4.97e-6   -1.09e-5  
+                                (4.15e-5)  (3.25e-5)  (4.36e-5)  (3.59e-5) 
 Fixed-Effects:                  ---------- ---------- ---------- ----------
 state_yr                               Yes         No        Yes         No
 bank_yr                                Yes        Yes        Yes        Yes
 county_yr                               No        Yes         No        Yes
 _______________________________ __________ __________ __________ __________
 S.E.: Clustered                 by: RSSDID by: RSSDID by: RSSDID by: RSSDID
-Observations                    18,278,991 18,279,222 18,278,991 18,279,222
-R2                                 0.02800    0.03669    0.02796    0.03664
+Observations                    18,277,850 18,277,810 18,277,850 18,277,810
+R2                                 0.02745    0.03533    0.02741    0.03528
 Within R2                          0.00108    0.00085    0.00103    0.00079
 ```
 
 Panel B: By Bank Size
 
 ```
-                                     model 1    model 2    model 3    model 4    model 5    model 6    model 7    model 8
-college_frac                       0.0123***  0.0134***  0.0033***  0.0034***                                            
-                                  (0.0018)   (0.0018)   (0.0002)   (0.0002)                                              
-log(family_income)                -0.0553    -0.0446     0.0342***  0.0318*** -0.1468**  -0.1442**   0.0043    -0.0030   
-                                  (0.0537)   (0.0522)   (0.0085)   (0.0092)   (0.0569)   (0.0558)   (0.0082)   (0.0090)  
-dividend_frac                      0.0006     0.0007     0.0009***  0.0010***                                            
-                                  (0.0018)   (0.0017)   (0.0002)   (0.0002)                                              
-factor_age_bin2                   -0.0016*** -0.0013*** -0.0002*** -0.0002*** -0.0018*** -0.0014*** -0.0004*** -0.0003***
-                                  (0.0004)   (0.0004)   (3.45e-5)  (3.23e-5)  (0.0004)   (0.0005)   (3.62e-5)  (3.34e-5) 
-factor_age_bin3                   -0.0023*** -0.0021*** -0.0006*** -0.0006*** -0.0024*** -0.0021*** -0.0007*** -0.0006***
-                                  (0.0006)   (0.0007)   (4.89e-5)  (4.67e-5)  (0.0006)   (0.0006)   (5.26e-5)  (4.99e-5) 
-factor_age_bin4                   -0.0030*** -0.0032*** -0.0008*** -0.0009*** -0.0030*** -0.0029*** -0.0008*** -0.0008***
-                                  (0.0007)   (0.0009)   (6.34e-5)  (6.12e-5)  (0.0007)   (0.0008)   (6.85e-5)  (6.52e-5) 
-lag_county_deposit_hhi             0.0003               -0.0015***             0.0010               -0.0011***           
-                                  (0.0007)              (0.0002)              (0.0007)              (0.0002)             
-population_density                 0.0011               -0.0018***             0.0026**             -0.0014***           
-                                  (0.0009)              (0.0001)              (0.0011)              (0.0001)             
-log_zip_deposits                   0.0005***  0.0006***  0.0002***  0.0002***  0.0005***  0.0006***  0.0002***  0.0002***
-                                  (0.0001)   (0.0001)   (7.99e-6)  (8.49e-6)  (0.0001)   (0.0001)   (7.97e-6)  (8.5e-6)  
-log1p(family_income)               0.0548     0.0439    -0.0346*** -0.0323***  0.1475**   0.1448**  -0.0044     0.0029   
-                                  (0.0538)   (0.0523)   (0.0085)   (0.0092)   (0.0571)   (0.0560)   (0.0083)   (0.0090)  
-sophisticated                                                                  0.0030***  0.0031***  0.0012***  0.0011***
-                                                                              (0.0005)   (0.0006)   (4.28e-5)  (4.09e-5) 
-Fixed-Effects:                    ---------- ---------- ---------- ---------- ---------- ---------- ---------- ----------
-state_yr                                 Yes         No        Yes         No        Yes         No        Yes         No
-bank_yr                                  Yes        Yes        Yes        Yes        Yes        Yes        Yes        Yes
-county_yr                                 No        Yes         No        Yes         No        Yes         No        Yes
-_________________________________ __________ __________ __________ __________ __________ __________ __________ __________
-S.E.: Clustered                   by: RSSDID by: RSSDID by: RSSDID by: RSSDID by: RSSDID by: RSSDID by: RSSDID by: RSSDID
-Observations                       1,974,418  1,974,648 16,304,573 16,306,331  1,974,418  1,974,648 16,304,573 16,306,331
-R2                                   0.02482    0.04171    0.03043    0.04381    0.02455    0.04146    0.03040    0.04377
-Within R2                            0.00337    0.00194    0.00088    0.00074    0.00309    0.00168    0.00085    0.00070
+                                     model 1    model 2        model 3    model 4    model 5    model 6    model 7     model 8
+college_frac                       0.0125***  0.0136***      0.0032***  0.0033***                                             
+                                  (0.0018)   (0.0018)       (0.0002)   (0.0002)                                               
+log(family_income)                -0.0006*** -0.0007***     -0.0004*** -0.0004***  0.0004*    0.0004    -0.0001*** -5.98e-5***
+                                  (0.0002)   (0.0002)       (2.36e-5)  (2.45e-5)  (0.0002)   (0.0002)   (1.87e-5)  (2.05e-5)  
+dividend_frac                      0.0006     0.0006         0.0009***  0.0010***                                             
+                                  (0.0018)   (0.0017)       (0.0002)   (0.0002)                                               
+factor_age_bin2                   -0.0016*** -0.0013***     -0.0002*** -0.0002*** -0.0018*** -0.0014*** -0.0004*** -0.0003*** 
+                                  (0.0004)   (0.0004)       (3.45e-5)  (3.22e-5)  (0.0004)   (0.0005)   (3.62e-5)  (3.33e-5)  
+factor_age_bin3                   -0.0023*** -0.0021***     -0.0006*** -0.0006*** -0.0024*** -0.0020*** -0.0007*** -0.0006*** 
+                                  (0.0006)   (0.0006)       (4.9e-5)   (4.67e-5)  (0.0006)   (0.0006)   (5.27e-5)  (4.98e-5)  
+factor_age_bin4                   -0.0030*** -0.0032***     -0.0008*** -0.0009*** -0.0029*** -0.0028*** -0.0008*** -0.0008*** 
+                                  (0.0007)   (0.0009)       (6.35e-5)  (6.13e-5)  (0.0007)   (0.0008)   (6.85e-5)  (6.51e-5)  
+lag_county_deposit_hhi             0.0003                   -0.0015***             0.0010               -0.0011***            
+                                  (0.0007)                  (0.0002)              (0.0007)              (0.0002)              
+population_density                 0.0011                   -0.0018***             0.0026**             -0.0014***            
+                                  (0.0009)                  (0.0001)              (0.0011)              (0.0001)              
+log_zip_deposits                   0.0005***  0.0006***      0.0002***  0.0002***  0.0005***  0.0006***  0.0002***  0.0002*** 
+                                  (0.0001)   (0.0001)   (8e-6)         (8.5e-6)   (0.0001)   (0.0001)   (7.97e-6)  (8.5e-6)   
+sophisticated                                                                      0.0031***  0.0032***  0.0012***  0.0011*** 
+                                                                                  (0.0005)   (0.0006)   (4.25e-5)  (4.07e-5)  
+Fixed-Effects:                    ---------- ---------- -------------- ---------- ---------- ---------- ---------- -----------
+state_yr                                 Yes         No            Yes         No        Yes         No        Yes          No
+bank_yr                                  Yes        Yes            Yes        Yes        Yes        Yes        Yes         Yes
+county_yr                                 No        Yes             No        Yes         No        Yes         No         Yes
+_________________________________ __________ __________ ______________ __________ __________ __________ __________ ___________
+S.E.: Clustered                   by: RSSDID by: RSSDID     by: RSSDID by: RSSDID by: RSSDID by: RSSDID by: RSSDID  by: RSSDID
+Observations                       1,974,418  1,973,373     16,303,432 16,304,636  1,974,418  1,973,373 16,303,432  16,304,636
+R2                                   0.02482    0.04114        0.02968    0.04177    0.02453    0.04087    0.02965     0.04173
+Within R2                            0.00336    0.00194        0.00088    0.00074    0.00307    0.00166    0.00085     0.00070
 ```
 
 ---
 
-## 4. Openings and Branch Usage (Pandemic Era)
+## 4. Marginal Effects by Period
+
+Marginal effect of a one within–standard-deviation increase in deposit beta on opening probability, expressed as a percentage of the mean opening rate in each period. County–year and bank–year fixed effects (county spec). Large banks (blue) vs small banks (gold). Source: `code/analysis/key_opening_results_02202026.qmd` (tbl-marginal-effects-opening-by-regime, fig-opening-pct-of-mean-by-regime).
+
+![Marginal effect of deposit beta (one within-SD) on opening rate as % of mean, by period](figures/pct_of_mean_opening_by_regime_03012026.jpeg)
+
+---
+
+## 5. Openings and Branch Usage (Pandemic Era)
 
 Branch opening regressions for 2020–2023 (pandemic era), adding usage variables from SafeGraph/advan: drop in visits (2019→2021) and log median distance from home. Odd columns: state–year + bank–year FE; even columns: county–year + bank–year FE. First table: full sample (baseline vs with usage); second table: by bank size. Standard errors clustered by bank. Source: `code/analysis/key_opening_results_02202026.qmd` (tbl-open-usage-full, open_usage_by_size).
 
