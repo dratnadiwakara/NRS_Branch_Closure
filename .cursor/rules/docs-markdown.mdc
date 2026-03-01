@@ -34,6 +34,36 @@ Apply this to every figure reference you add or edit in `docs/**/*.md`.
 
 ---
 
+## AI-written explanations
+
+When you add **interpretive or explanatory paragraphs** in `docs/` that **interpret generated results** (e.g. reconciling regression results with other findings, explaining why a coefficient might be large or change over time, discussing economic mechanisms, or drafting narrative about what the results mean):
+
+1. **Put the content in a box** (bordered block so it is visually distinct).
+2. **Prefix the first line with "AI WRITTEN:"** and style that label in red (see example below).
+
+**When it applies:** Only when the text **interprets** already-generated results—i.e. explains what coefficients or patterns mean, offers possible mechanisms, reconciles different results, or draws implications. It does **not** apply to:
+
+- **Sample construction** (how the sample was built, which units or years are included, restrictions).
+- **Regression specification** (which variables, fixed effects, controls, or standard errors are used).
+- **Design or methodology** (what the outcome variable is, how treatment is defined, identification logic).
+- **Source citations**, table captions, or verbatim quotes from papers or code.
+
+Those are factual/descriptive and do not need the AI WRITTEN box. Reserve the box for **interpretation of results** (e.g. “a possible explanation is…”, “this reconciles with…”, “the coefficient is larger because…”).
+
+**Format:** Use a `div` with a border and, inside it, a paragraph that starts with the red **AI WRITTEN:** prefix:
+
+```html
+<div style="border: 1px solid #ccc; padding: 1rem; margin: 1rem 0;">
+<p><strong style="color: #b91c1c;">AI WRITTEN:</strong> Your explanatory or interpretive text here. For example: the positive coefficient on closures is larger in later subperiods, while deposit reallocation results show incumbents no longer gain—a possible explanation is that closing banks retain deposits at remaining branches…</p>
+</div>
+```
+
+- **Box:** `border: 1px solid #ccc; padding: 1rem; margin: 1rem 0;` (or equivalent) so the block is clearly set off.
+- **Red label:** `<strong style="color: #b91c1c;">AI WRITTEN:</strong>` — the phrase "AI WRITTEN" must be styled in red (`#b91c1c`).
+- **Scope:** Use this only when you are **interpreting generated results** (coefficients, patterns, mechanisms, reconciliation). Do not use it for methodology, sample construction, regression specification, design description, verbatim quotes, table captions, or source citations.
+
+---
+
 ## Layout and config (Jekyll / GitHub Pages)
 
 The `docs/` site is built with Jekyll. Respect the following when creating or editing docs.
