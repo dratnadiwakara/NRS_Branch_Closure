@@ -73,7 +73,7 @@ cbsa_county <- cbsa_county[!duplicated(county)]
 zip_cbsa <- merge(zip_county, cbsa_county, by.x = "COUNTY", by.y = "county", all.x = TRUE)
 zip_cbsa <- unique(zip_cbsa[, .(ZIP, CBSA = cbsacode)], by = "ZIP")
 
-rm(zip_county, cbsa_county)
+rm(cbsa_county)
 
 # ---------------------------------------------------------------------------
 # 1b. Demographics
@@ -324,6 +324,10 @@ dt_combined <- dt_combined[
 cat("Combined sample ready. Observations:", format(nrow(dt_combined), big.mark = ","), "\n")
 
 ```
+```{r}
+dt_combined <- merge(dt_combined,zip_county,by.x="ZIPBR",by.y="ZIP",all.x=T)
+dt_combined[,county_yr:=paste(COUNTY,YEAR)]
+```
 
 ```{r}
 # =============================================================================
@@ -332,7 +336,8 @@ cat("Combined sample ready. Observations:", format(nrow(dt_combined), big.mark =
 
 setFixest_fml(
   ..fe       = ~ ZIPBR + cbsa_yr,
-  ..controls = ~ zip_growth_3yr + log1p(branches_zip_lag1),#+ log1p(total_deps_zip_lag1) + log1p(n_incumbent_banks),
+  ..fe_cty_yr   = ~ ZIPBR + county_yr,
+  ..controls = ~ zip_growth_3yr + log1p(branches_zip_lag1)+ log1p(n_incumbent_banks),#+ log1p(total_deps_zip_lag1) + log1p(n_incumbent_banks),
   ..het_vars = ~ sophisticated + factor_age_bin + log_income
 )
 
@@ -344,6 +349,42 @@ setFixest_etable(
 )
 
 ```
+
+
+
+```{r}
+r <- list()
+
+
+r[["2000-7 (1)"]] <- feols(
+  gr_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  data = dt_combined[YEAR %in% 2000:2007], vcov = ~ZIPBR
+)
+
+
+
+r[["2008-11 (1)"]] <- feols(
+  gr_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  data = dt_combined[YEAR %in% 2008:2011], vcov = ~ZIPBR
+)
+
+
+r[["2012-19 (1)"]] <- feols(
+  gr_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  data = dt_combined[YEAR %in% 2012:2019], vcov = ~ZIPBR
+)
+
+
+r[["2020-24 (1)"]] <- feols(
+  gr_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  data = dt_combined[YEAR %in% 2020:2024], vcov = ~ZIPBR
+)
+
+
+
+etable(r,order=c("fraction_of_branches_closed","fraction_of_new_branches","share_deps_closed"))
+```
+
 
 
 ```{r}
