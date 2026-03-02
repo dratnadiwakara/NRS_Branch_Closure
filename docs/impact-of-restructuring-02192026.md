@@ -15,27 +15,25 @@ This document gathers results on the broader implications of branch restructurin
 We relate one-year deposit growth at *incumbent* banks (those with no openings or closures in the ZIP–year) to two branch-count treatments: the fraction of branches closed and the fraction of new branches in the ZIP, with the prior-year ZIP deposit base as the common scale so coefficients are pass-through elasticities. ZIP and CBSA–year fixed effects and pre-trend (`zip_growth_3yr`) are included; standard errors are clustered by ZIP. The table reports estimates by subperiod (2000–2007, 2008–2011, 2012–2019, 2020–2024). 
 
 ```
-                               2000-7 (1) 2008-11 .. 2012-19 .. 2020-24 ..
-Dependent Var.:                    gr_1yr     gr_1yr     gr_1yr     gr_1yr
-                                                                          
-fraction_of_branches_closed     0.0987***  0.0656***  0.0088    -0.0472***
-                               (0.0157)   (0.0171)   (0.0097)   (0.0151)  
-fraction_of_new_branches       -0.0301*** -0.0345*** -0.0406*** -0.0629***
-                               (0.0077)   (0.0119)   (0.0110)   (0.0226)  
-zip_growth_3yr              2e-5*          0.0001***  5.71e-6** -0.0003   
-                               (1.17e-5)  (1.99e-5)  (2.84e-6)  (0.0007)  
-log1p(branches_zip_lag1)       -0.0688*** -0.0290**  -0.0577*** -0.0529***
-                               (0.0089)   (0.0123)   (0.0067)   (0.0127)  
-log1p(n_incumbent_banks)        0.0573***  0.0272**   0.0643***  0.0356***
-                               (0.0081)   (0.0114)   (0.0066)   (0.0125)  
-Fixed-Effects:              ------------- ---------- ---------- ----------
-ZIPBR                                 Yes        Yes        Yes        Yes
-county_yr                             Yes        Yes        Yes        Yes
-___________________________ _____________ __________ __________ __________
-S.E.: Clustered                 by: ZIPBR  by: ZIPBR  by: ZIPBR  by: ZIPBR
-Observations                       50,735     44,430     86,614     39,839
-R2                                0.48056    0.43429    0.42217    0.54278
-Within R2                         0.00502    0.00197    0.00425    0.00382
+                            2000-7 (1) 2008-11 .. 2012-19 .. 2020-24 ..
+Dependent Var.:                 gr_1yr     gr_1yr     gr_1yr     gr_1yr
+                                                                       
+fraction_of_branches_closed  0.0670***  0.0661***  0.0098    -0.0475***
+                            (0.0129)   (0.0175)   (0.0097)   (0.0151)  
+fraction_of_new_branches    -0.0352*** -0.0327*** -0.0409*** -0.0641***
+                            (0.0066)   (0.0120)   (0.0110)   (0.0226)  
+log1p(branches_zip_lag1)    -0.0645*** -0.0378*** -0.0591*** -0.0533***
+                            (0.0065)   (0.0132)   (0.0068)   (0.0128)  
+log1p(n_incumbent_banks)     0.0390***  0.0284**   0.0649***  0.0351***
+                            (0.0063)   (0.0118)   (0.0066)   (0.0124)  
+Fixed-Effects:              ---------- ---------- ---------- ----------
+ZIPBR                              Yes        Yes        Yes        Yes
+county_yr                          Yes        Yes        Yes        Yes
+___________________________ __________ __________ __________ __________
+S.E.: Clustered              by: ZIPBR  by: ZIPBR  by: ZIPBR  by: ZIPBR
+Observations                    69,807     44,547     86,662     39,845
+R2                             0.43716    0.44281    0.42247    0.54296
+Within R2                      0.00412    0.00151    0.00427    0.00378
 ---
 Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
 ```

@@ -351,22 +351,22 @@ setFixest_etable(
 r_frac <- list()
 
 r_frac[["2000-2007"]] <- feols(
-  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches  | ..fe_cty_yr,
   data = dt_combined[YEAR %in% 2000:2007], vcov = ~ZIPBR
 )
 
 r_frac[["2008-2011"]] <- feols(
-  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches | ..fe_cty_yr,
   data = dt_combined[YEAR %in% 2008:2011], vcov = ~ZIPBR
 )
 
 r_frac[["2012-2019"]] <- feols(
-  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches | ..fe_cty_yr,
   data = dt_combined[YEAR %in% 2012:2019], vcov = ~ZIPBR
 )
 
 r_frac[["2020-2024"]] <- feols(
-  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches + ..controls | ..fe_cty_yr,
+  delta_HHI_1yr ~ fraction_of_branches_closed + fraction_of_new_branches  | ..fe_cty_yr,
   data = dt_combined[YEAR %in% 2020:2024], vcov = ~ZIPBR
 )
 

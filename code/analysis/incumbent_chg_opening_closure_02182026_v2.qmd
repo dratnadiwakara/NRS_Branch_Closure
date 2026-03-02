@@ -337,7 +337,7 @@ dt_combined[,county_yr:=paste(COUNTY,YEAR)]
 setFixest_fml(
   ..fe       = ~ ZIPBR + cbsa_yr,
   ..fe_cty_yr   = ~ ZIPBR + county_yr,
-  ..controls = ~ zip_growth_3yr + log1p(branches_zip_lag1)+ log1p(n_incumbent_banks),#+ log1p(total_deps_zip_lag1) + log1p(n_incumbent_banks),
+  ..controls = ~  log1p(branches_zip_lag1)+ log1p(n_incumbent_banks),#+ log1p(total_deps_zip_lag1) + log1p(n_incumbent_banks),zip_growth_3yr
   ..het_vars = ~ sophisticated + factor_age_bin + log_income
 )
 
