@@ -33,7 +33,7 @@ Below I list my comments. Some of these echo points raised by the referee:
 
    For example, it is unclear a priori whether small-business lending should decline following branch closures. Such an effect may arise if physical branches play an important role in screening and monitoring small firms. Even evidence showing that certain outcomes are not affected would be informative, as it would help clarify which economic margins branch closures do and do not operate through.
 
-<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+<div class="callout-addressed">
 
 **✓ Addressed.** We document (i) how incumbent branches’ deposit growth responds to the fraction of branches closed and new branches in the ZIP (deposit reallocation), <s>and (ii) county-level mortgage and CRA lending growth following branch restructuring, with heterogeneity by income and population-weighted LMI (“who is hurt”).</s> See <a href="NRS_Branch_Closure/impact-of-restructuring-02192026.html">Impact of branch restructuring on local deposit and credit markets</a> for results.
 
@@ -84,7 +84,7 @@ While the finding that high-beta branches are more likely to close is interestin
 
 More importantly, even if the evidence on branch closures is convincing, the paper does not address the broader question of why this matters. The analysis would benefit from a deeper exploration of the implications of branch closures. What happens to local competition after a branch closes? How are nearby branches, both within the same bank and across competing banks, affected? Are branch closures/openings clustered across banks within the same area? Who is ultimately hurt or helped by these closures? Quantifying the effects on market structure, deposit pricing, or consumer outcomes would substantially strengthen the paper’s contribution beyond documenting closure patterns.
 
-<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+<div class="callout-addressed">
 
 **✓ Addressed (in part).** We quantify (i) how incumbent banks’ deposit growth in a ZIP responds to the fraction of branches closed and the fraction of new branches in that ZIP (how nearby branches are affected; deposit reallocation), <s>and (ii) county-level mortgage and CRA lending growth following restructuring, with heterogeneity by low-income and high–LMI counties (“who is hurt or helped”).</s>  See <a href="NRS_Branch_Closure/impact-of-restructuring-02192026.html">Impact of branch restructuring on local deposit and credit markets</a> for results.
 <br/>
@@ -112,7 +112,7 @@ The paper measures deposit beta by aggregating all deposit categories (checking,
 
 For example, a bank or branch with a high beta driven by a large share of time deposits is fundamentally different from one with a low beta driven by a predominance of savings or checking deposits. Treating these as comparable risks conflates compositional effects with behavioral or demographic effects and may distort the interpretation of the results.
 
-<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+<div class="callout-addressed">
 
 **✓ Addressed.** Time-deposit share (`time_deposits_assets`) added to the first-stage deposit beta model. See <a href="NRS_Branch_Closure/key-closure-results.html">Key closure results</a> (Deposit Beta Regression table).
 
@@ -131,7 +131,7 @@ In principle, low beta may simply reflect a lack of competition, in which case e
 
 In addition, evidence from the closure and opening regressions with local demographic characteristics suggests that local income is a consistent predictor of branch location decisions. Banks appear less likely to close branches and more likely to open them in wealthier areas, consistent with a desire to maximize deposits. This pattern aligns with industry reports and press coverage (e.g., *Wall Street Journal*, “America’s Biggest Bank Is Growing the Old-Fashioned Way: Branches,” 2024) emphasizing the importance of local income and wealth. The wealthiness of an area may matter not only for deposit availability but also for cross-selling opportunities such as credit cards or wealth management. Notably, wealthier areas also tend to have lower deposit betas, as shown in Table 2. This raises the possibility that the branch closure results are driven less by pricing power per se and more by local wealth, with deposit beta acting as a correlated proxy. This channel requires additional analysis and clarification as it is not fully clear to me whether deposit beta is the fundamental driver or partly a proxy for other factors like income. The paper could also benefit from providing case evidence based on specific bank decisions regarding branch expansion, such as recent expansions in branch networks by JP Morgan.
 
-<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+<div class="callout-addressed">
 
 **<s>✓ Addressed (in part).** The “who is hurt or helped” dimension is addressed by heterogeneity in county-level mortgage and CRA lending: we interact closure and opening shares with low-income county and population-weighted LMI. See <a href="NRS_Branch_Closure/impact-of-restructuring-02192026.html">Impact of branch restructuring on local deposit and credit markets</a>. Ln(income) has been broken out in the closings/openings models; see <a href="NRS_Branch_Closure/key-closure-results.html">Key closure results</a>.</s>
 
@@ -166,7 +166,7 @@ The analysis relies on bank-level variation in interest expense on deposits, com
 
 Using RateWatch data where available would provide an important alternative source of variation and help assess whether the results are sensitive to the choice of beta construction. More broadly, the paper would be strengthened by validating the imputed deposit betas against realized betas constructed from RateWatch data where possible. Even if RateWatch is noisy or incomplete, showing that projected betas align with observed pricing behavior in overlapping samples would increase confidence in the beta measure and its economic interpretation.
 
-<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+<div class="callout-addressed">
 
 **✓ Addressed.** We construct branch-level RateWatch deposit betas for 12‑month CDs (`12MCD10K`) and money market accounts (`MM25K`) over the 2016–2019 and 2022–2023 tightening cycles and compare them to our imputed branch-level deposit betas. Binned scatter plots show that where RateWatch data are available, branches with higher estimated betas also tend to have higher realized betas, indicating that the projected betas track actual pricing behavior in overlapping samples. See <a href="NRS_Branch_Closure/beta-ratewatch-validation.html">RateWatch validation of deposit betas</a> for details and figures.
 
@@ -179,7 +179,7 @@ Using RateWatch data where available would provide an important alternative sour
 ### **7. Other minor comments**
 - **Standard errors:** Given that deposit beta is itself estimated in a first stage and then used as a regressor in the branch closure and opening regressions, the reported standard errors do not account for this generated-regressor problem. The standard errors should therefore be bootstrapped (or otherwise adjusted) to properly reflect the additional estimation uncertainty.
 
-<div style="background-color: #e8f5e9; padding: 0.75rem 1rem; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 0.75rem 0;">
+<div class="callout-addressed">
 
 **✓ Addressed (in part).** Two-stage bank-level bootstrap for **closure** regressions. Bootstrap SE and 95% CI reported for large and small banks. See <a href="NRS_Branch_Closure/closure_openings_bootstrap.html">Closure and openings bootstrap</a>. The opening bootstrap is a placeholder; results to be added.
 

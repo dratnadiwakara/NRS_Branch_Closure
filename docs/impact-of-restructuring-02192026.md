@@ -68,8 +68,9 @@ Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
 ```
 
 
-<div style="border: 1px solid #ccc; padding: 1rem; margin: 1rem 0;">
-<p><strong style="color: #b91c1c;">AI WRITTEN:</strong> <strong>Interpretation and reconciliation with deposit reallocation.</strong> The positive coefficient on closures is larger in later subperiods (2012–2019, 2020–2024), while the deposit reallocation results (Section 1) show that incumbent banks in the ZIP no longer gain—and may lose—deposits when branches close in those same periods. A possible explanation is that closing banks are increasingly able to <strong>retain deposits at their remaining branches</strong> after a closure, leveraging technology (e.g. digital and mobile banking), so that depositors do not switch to other banks in the same ZIP. In the data, only about X% of closures correspond to the bank fully exiting the ZIP; in the other Y% of cases the closing bank retains at least one branch in the ZIP. Even when the bank stays in the ZIP, it can hold a large share of the closed branch’s deposits at branches <em>outside</em> the ZIP or in non-branch channels. Then the closing bank’s <strong>in-ZIP</strong> deposit share falls (reflected in the ZIP-level HHI calculation), so local concentration rises, while local incumbents do not gain—and may even lose—because the freed deposits were retained by the closing bank rather than reallocated to them.</p>
+<div class="ai-written-box">
+<p><strong class="ai-written-label">AI WRITTEN:</strong> <strong>Interpretation and reconciliation with deposit reallocation.</strong> The positive coefficient on closures is larger in later subperiods (2012–2019, 2020–2024), while the deposit reallocation results (Section 1) show that incumbent banks in the ZIP no longer gain—and may lose—deposits when branches close in those same periods. A possible explanation is that closing banks are increasingly able to <strong>retain deposits at their remaining branches</strong> after a closure, leveraging technology (e.g. digital and mobile banking), so that depositors do not switch to other banks in the same ZIP. In the data, only about X% of closures correspond to the bank fully exiting the ZIP; in the other Y% of cases the closing bank retains at least one branch in the ZIP. Even when the bank stays in the ZIP, it can hold a large share of the closed branch’s deposits at branches <em>outside</em> the ZIP or in non-branch channels. Then the closing bank’s <strong>in-ZIP</strong> deposit share falls (reflected in the ZIP-level HHI calculation), so local concentration rises, while local incumbents do not gain—and may even lose—because the freed deposits were retained by the closing bank rather than reallocated to them.</p>
+</div>
 
 > **Comment from Opus:** Why the current explanation works The key mechanism is about where the freed deposits go:
 > Pre-2012: When Bank A closes a branch, its depositors switch to Banks B and C in the same ZIP. Total in-ZIP deposits stay roughly the same; they just redistribute. Incumbents gain (positive coefficient in Section 1). HHI rises modestly (0.13) because one player's share shrinks, but the effect is dampened because the deposits stay in the ZIP and get spread across remaining banks.
@@ -78,11 +79,13 @@ Signif. codes: 0 '***' 0.01 '**' 0.05 '*' 0.1 ' ' 1
 > Even when the bank keeps a branch in the ZIP, many of the closed branch's depositors may end up booked at branches outside the ZIP (same bank, different location), so Bank A's in-ZIP share still falls substantially.
 > One alternative (complementary) explanation worth considering: market thinning
 > Over the 2000–2024 period, average branch density per ZIP has fallen. When a ZIP starts with 6 banks, losing one bank's presence is a smaller HHI shock than when it starts with 3 banks. So the growing HHI coefficient may partly reflect that later closures happen in thinner markets, where each closure is a proportionally bigger structural hit to competition. > This is consistent with the log1p(branches_zip_lag1) control in the HHI regression flipping from positive (pre-2012) to negative (post-2012) — ZIPs with more branches see less concentration change in the later period, reinforcing the thinning story.
-This explanation is complementary rather than alternative: technology-enabled retention is why deposits leave the ZIP (demand side), and thinner markets are why each departure has a bigger structural impact (supply side). Together they explain why the HHI coefficient roughly doubles from 2000–2007 to 2020–2024.
+<div class="ai-written-box">
+<p><strong class="ai-written-label">AI WRITTEN:</strong> This explanation is complementary rather than alternative: technology-enabled retention is why deposits leave the ZIP (demand side), and thinner markets are why each departure has a bigger structural impact (supply side). Together they explain why the HHI coefficient roughly doubles from 2000–2007 to 2020–2024.</p>
+</div>
 
 > Bottom line
 > The current explanation is correct — the reconciliation fundamentally comes down to deposits leaving the ZIP vs. staying in the ZIP. You might tighten it by (i) making that "deposits leave the denominator" point more explicit and (ii) adding the market-thinning point as a reinforcing structural factor. The two stories together — retention via technology + thinner starting markets — give a clean account of the divergence.
-</div>
+
 ## 3. Impact on Mortgage and CRA Lending
 *Source: `code/analysis/closure_credit_impacts_02192026.qmd`*
 

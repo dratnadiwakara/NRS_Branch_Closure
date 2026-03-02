@@ -50,17 +50,39 @@ When you add **interpretive or explanatory paragraphs** in `docs/` that **interp
 
 Those are factual/descriptive and do not need the AI WRITTEN box. Reserve the box for **interpretation of results** (e.g. “a possible explanation is…”, “this reconciles with…”, “the coefficient is larger because…”).
 
-**Format:** Use a `div` with a border and, inside it, a paragraph that starts with the red **AI WRITTEN:** prefix:
+**Format:** Use the shared CSS classes from `docs/css/site.css` (included by `default.html`). Do **not** duplicate these styles inline. Use class-based markup:
 
 ```html
-<div style="border: 1px solid #ccc; padding: 1rem; margin: 1rem 0;">
-<p><strong style="color: #b91c1c;">AI WRITTEN:</strong> Your explanatory or interpretive text here. For example: the positive coefficient on closures is larger in later subperiods, while deposit reallocation results show incumbents no longer gain—a possible explanation is that closing banks retain deposits at remaining branches…</p>
+<div class="ai-written-box">
+<p><strong class="ai-written-label">AI WRITTEN:</strong> Your explanatory or interpretive text here. For example: the positive coefficient on closures is larger in later subperiods, while deposit reallocation results show incumbents no longer gain—a possible explanation is that closing banks retain deposits at remaining branches…</p>
 </div>
 ```
 
-- **Box:** `border: 1px solid #ccc; padding: 1rem; margin: 1rem 0;` (or equivalent) so the block is clearly set off.
-- **Red label:** `<strong style="color: #b91c1c;">AI WRITTEN:</strong>` — the phrase "AI WRITTEN" must be styled in red (`#b91c1c`).
+- **Box:** Use `class="ai-written-box"` on the wrapper `div` (styles: border, padding, margin).
+- **Red label:** Use `class="ai-written-label"` on the **AI WRITTEN:** element (e.g. `<strong class="ai-written-label">AI WRITTEN:</strong>`).
 - **Scope:** Use this only when you are **interpreting generated results** (coefficients, patterns, mechanisms, reconciliation). Do not use it for methodology, sample construction, regression specification, design description, verbatim quotes, table captions, or source citations.
+
+---
+
+## Shared CSS classes (do not duplicate inline)
+
+Styles for callout and AI-written boxes live in **`docs/css/site.css`** and are included by `docs/_layouts/default.html`. When adding or editing content in `docs/**/*.md`, use these **classes** instead of inline `style="..."` so styles stay consistent and in one place.
+
+| Class | Use for | Markup |
+|-------|--------|--------|
+| `ai-written-box` | Wrapper for AI-written interpretation paragraphs | `<div class="ai-written-box">` |
+| `ai-written-label` | Red "AI WRITTEN:" prefix inside the box | `<strong class="ai-written-label">AI WRITTEN:</strong>` |
+| `callout-addressed` | Green "Addressed" / response callouts (e.g. referee comment responses) | `<div class="callout-addressed">` |
+
+**Callout-addressed example** (e.g. in response-plan or similar):
+
+```html
+<div class="callout-addressed">
+**✓ Addressed.** Your response text here…
+</div>
+```
+
+Do **not** copy the equivalent inline styles into markdown; use the class so future changes to `site.css` apply everywhere.
 
 ---
 
@@ -101,6 +123,7 @@ description: NRS branch closure and opening analysis documentation
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ page.title | default: site.title }}</title>
+  <link rel="stylesheet" href="{{ '/css/site.css' | relative_url }}">
   <!-- Hypothesis -->
   <script async src="https://hypothes.is/embed.js"></script>
   <style>
