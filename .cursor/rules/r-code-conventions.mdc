@@ -13,6 +13,7 @@ alwaysApply: true
 - **Documentation:** Use **Roxygen2** style (`#'`) to document every custom function.
 - **Project Hygiene:** Every major computed object should be cached/saved using `saveRDS()`.
 - **Comments:** Focus on the **WHY** (logic/intent) rather than the **WHAT**.
+- **Figure Export Toggle:** Each script that can generate figures must define a single logical flag `save_figures` (e.g., `save_figures <- TRUE`), and all export calls (e.g., `ggsave()`) must only execute when this flag is `TRUE`.
 - **Data Lineage (Crucial):** Whenever a script reads a dataset created by another script in this project (e.g., via `readRDS()` or `load()`), you MUST add a comment immediately above the read command pointing to the source script that generated it.
     - *Example:* `# Data created by code/sample-construction/create_panel.R`
     - `dt <- readRDS(paste0(data_path, "final_panel.rds"))`
@@ -47,24 +48,31 @@ theme_custom <- function(base_size = 14) {
 ```
 
 ## 5. Export Standards (ggsave)
-- Location: All figures must be saved in the docs/figures/ directory (GitHub Pages).
-- Naming: Append the current date in mmddyyyy suffix (e.g., filename_02182026.png).
-- Format: Always set bg = "transparent" and provide explicit width and height dimensions.
+- All figures generated must be saved in the `docs/figures/` directory (GitHub Pages) and follow the naming convention below.
+- Location: Always write output files to `docs/figures/`.
+- Naming: Append a date-time suffix in the form `YYYYMMDD_HHMMSS` (e.g., `filename_20260302_153045.png`).
+- Format: Always set `bg = "transparent"` and provide explicit `width` and `height` dimensions.
+- Execution: Wrap `ggsave()` (and any other figure export) calls in a check on `save_figures`, e.g., `if (isTRUE(save_figures)) { ... }`.
 
 Standard ggsave Template:
 
 ```r
-# Generate date suffix
-dat_suffix <- format(Sys.Date(), "%m%d%Y")
+# Logical flag to control whether figures are written to disk
+save_figures <- TRUE
 
-# Example Save
-ggsave(
-  filename = paste0("docs/figures/plot_name_", dat_suffix, ".png"),
-  plot = last_plot(),
-  width = 8, 
-  height = 6, 
-  bg = "transparent"
-)
+# Generate date-time suffix
+dat_suffix <- format(Sys.time(), "%Y%m%d_%H%M%S")
+
+# Example conditional save
+if (isTRUE(save_figures)) {
+  ggsave(
+    filename = paste0("docs/figures/plot_name_", dat_suffix, ".png"),
+    plot = last_plot(),
+    width = 8, 
+    height = 6, 
+    bg = "transparent"
+  )
+}
 ```
 
 

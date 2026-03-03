@@ -17,52 +17,9 @@ Summary statistics for the branch closure analysis sample, by bank size and rate
 Descriptive statistics for banks by size (large vs small, CPI-adjusted asset cutoff $100M) and rate cycle (Early 2004–2006, Mid 2016–2019, Late 2022–2024). Variables: Deposit beta, Age, College frac, Stock market frac, Family income, Sophisticated frac, HHI, Pop. density. Source: `code/analysis/desc_stats_closure_sample_02202026.qmd` (tbl-bank-stats).
 
 ```
-### Cycle: cycle_0406 
+### Panel A: Late Cycle (2022–2023)
 
-Number of banks by size:
-
-   0    1 
-5662   27 
-
-|Variable                                |Mean.x|SD.x |P10.x|P90.x|Mean.y|SD.y |P10.y|P90.y|
-|----------------------------------------|------|-----|-----|-----|------|-----|-----|-----|
-|Age                                     |37.27 | 2.52|34.19|38.72|39.90 | 4.35|34.71|45.33|
-|College educated fraction               | 0.45 | 0.10| 0.34| 0.56| 0.27 | 0.13| 0.14| 0.45|
-|Deposit-weighted Pop. density           | 0.46 | 0.14| 0.31| 0.60| 0.13 | 0.20| 0.01| 0.53|
-|Deposit beta                            | 0.29 | 0.10| 0.14| 0.40| 0.23 | 0.11| 0.09| 0.38|
-|Family income (000)                     |59.52 |14.01|44.80|78.40|50.34 |15.65|35.00|70.00|
-|Frac. deposits in sophisticated zipcodes| 0.64 | 0.25| 0.35| 0.87| 0.44 | 0.42| 0.00| 1.00|
-|HHI                                     | 0.25 | 0.17| 0.15| 0.36| 0.22 | 0.12| 0.10| 0.38|
-|Stock market participation frac         | 0.25 | 0.07| 0.19| 0.33| 0.20 | 0.08| 0.10| 0.29|
-
-
-
-### Cycle: cycle_1619 
-
-Number of banks by size:
-
-   0    1 
-5008   34 
-
-|Variable                                |Mean.x|SD.x |P10.x|P90.x |Mean.y|SD.y |P10.y|P90.y|
-|----------------------------------------|------|-----|-----|------|------|-----|-----|-----|
-|Age                                     |36.59 | 4.31|30.32| 41.36|40.75 | 4.38|35.52|45.80|
-|College educated fraction               | 0.50 | 0.16| 0.33|  0.71| 0.30 | 0.15| 0.16| 0.51|
-|Deposit-weighted Pop. density           | 0.51 | 0.16| 0.34|  0.68| 0.16 | 0.23| 0.01| 0.60|
-|Deposit beta                            | 0.24 | 0.09| 0.15|  0.37| 0.18 | 0.12| 0.03| 0.35|
-|Family income (000)                     |79.94 |30.36|57.80|112.40|59.07 |19.38|40.00|83.00|
-|Frac. deposits in sophisticated zipcodes| 0.67 | 0.33| 0.00|  1.00| 0.46 | 0.41| 0.00| 1.00|
-|HHI                                     | 0.25 | 0.15| 0.14|  0.35| 0.23 | 0.13| 0.11| 0.38|
-|Stock market participation frac         | 0.27 | 0.14| 0.13|  0.43| 0.20 | 0.09| 0.10| 0.30|
-
-
-
-### Cycle: cycle_2224 
-
-Number of banks by size:
-
-   0    1 
-4499   31 
+Large Banks (Obs = 31), Small Banks (Obs = 4499)
 
 |Variable                                |Mean.x|SD.x |P10.x|P90.x |Mean.y|SD.y |P10.y|P90.y|
 |----------------------------------------|------|-----|-----|------|------|-----|-----|-----|
@@ -74,6 +31,46 @@ Number of banks by size:
 |Frac. deposits in sophisticated zipcodes| 0.69 | 0.32| 0.00|  1.00| 0.46 | 0.41| 0.00| 1.00|
 |HHI                                     | 0.25 | 0.16| 0.14|  0.36| 0.23 | 0.13| 0.11| 0.39|
 |Stock market participation frac         | 0.28 | 0.14| 0.15|  0.45| 0.20 | 0.09| 0.10| 0.30|
+|Time deposit frac                       | 0.11 | 0.10| 0.03|  0.21| 0.25 | 0.13| 0.10| 0.43|
+|Uninsured deposits frac                 | 0.53 | 0.21| 0.20|  0.76| 0.35 | 0.15| 0.18| 0.54|
+
+
+
+### Panel B: Mid Cycle (2016–2019)
+
+Large Banks (Obs = 34), Small Banks (Obs = 5008)
+
+|Variable                                |Mean.x|SD.x |P10.x|P90.x |Mean.y|SD.y |P10.y|P90.y|
+|----------------------------------------|------|-----|-----|------|------|-----|-----|-----|
+|Age                                     |36.59 | 4.31|30.32| 41.36|40.75 | 4.38|35.52|45.80|
+|College educated fraction               | 0.50 | 0.16| 0.33|  0.71| 0.30 | 0.15| 0.16| 0.51|
+|Deposit-weighted Pop. density           | 0.51 | 0.16| 0.34|  0.68| 0.16 | 0.23| 0.01| 0.60|
+|Deposit beta                            | 0.24 | 0.09| 0.15|  0.37| 0.18 | 0.12| 0.03| 0.35|
+|Family income (000)                     |79.94 |30.36|57.80|112.40|59.07 |19.38|40.00|83.00|
+|Frac. deposits in sophisticated zipcodes| 0.67 | 0.33| 0.00|  1.00| 0.46 | 0.41| 0.00| 1.00|
+|HHI                                     | 0.25 | 0.15| 0.14|  0.35| 0.23 | 0.13| 0.11| 0.38|
+|Stock market participation frac         | 0.27 | 0.14| 0.13|  0.43| 0.20 | 0.09| 0.10| 0.30|
+|Time deposit frac                       | 0.11 | 0.10| 0.03|  0.20| 0.25 | 0.13| 0.10| 0.43|
+|Uninsured deposits frac                 | 0.52 | 0.20| 0.22|  0.75| 0.35 | 0.15| 0.18| 0.54|
+
+
+
+### Panel C: Early Cycle (2004–2006)
+
+Large Banks (Obs = 27), Small Banks (Obs = 5662)
+
+|Variable                                |Mean.x|SD.x |P10.x|P90.x|Mean.y|SD.y |P10.y|P90.y|
+|----------------------------------------|------|-----|-----|-----|------|-----|-----|-----|
+|Age                                     |37.27 | 2.52|34.19|38.72|39.90 | 4.35|34.71|45.33|
+|College educated fraction               | 0.45 | 0.10| 0.34| 0.56| 0.27 | 0.13| 0.14| 0.45|
+|Deposit-weighted Pop. density           | 0.46 | 0.14| 0.31| 0.60| 0.13 | 0.20| 0.01| 0.53|
+|Deposit beta                            | 0.29 | 0.10| 0.14| 0.40| 0.23 | 0.11| 0.09| 0.38|
+|Family income (000)                     |59.52 |14.01|44.80|78.40|50.34 |15.65|35.00|70.00|
+|Frac. deposits in sophisticated zipcodes| 0.64 | 0.25| 0.35| 0.87| 0.44 | 0.42| 0.00| 1.00|
+|HHI                                     | 0.25 | 0.17| 0.15| 0.36| 0.22 | 0.12| 0.10| 0.38|
+|Stock market participation frac         | 0.25 | 0.07| 0.19| 0.33| 0.20 | 0.08| 0.10| 0.29|
+|Time deposit frac                       | 0.09 | 0.05| 0.03| 0.16| 0.31 | 0.12| 0.17| 0.47|
+|Uninsured deposits frac                 | 0.57 | 0.17| 0.39| 0.77| 0.27 | 0.13| 0.13| 0.45|
 ```
 
 

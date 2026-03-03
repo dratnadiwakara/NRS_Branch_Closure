@@ -112,6 +112,79 @@ print(table(branch_sample$rate_cycle, useNA = "ifany"))
 ```
 
 
+# Table 1: Descriptive Statistics - Bank Level
+
+Summary statistics for the bank-level samples during three interest rate cycles. Large banks are those with assets ≥ $100 billion (in cycle-year dollars); small banks have assets < $100 billion. Panels A, B, and C correspond to the Late (2022–2023), Mid (2016–2019), and Early (2004–2006) cycles. For each group we report the mean, standard deviation (SD), and selected percentiles (P10, P90) for each variable.
+
+```{r}
+#| label: tbl-bank-desc-stats
+#| tbl-cap: "Table 1: Descriptive Statistics - Bank Level"
+#| results: asis
+
+# Ensure large_banks exists when prepare chunk was loaded from cache
+if (!exists("large_banks")) {
+  cpi <- readRDS(file.path(data_dir, "cpi.rds"))
+  cpi[, adj_ratio := CPI / CPI[year == 2024]]
+  cpi[, asset_cutoff := adj_ratio * 100000000]
+  all_banks <- rbindlist(lapply(names(beta_cycles), function(cycle_name) {
+    dt <- copy(beta_cycles[[cycle_name]]$data)
+    dt[, cycle := cycle_name]
+    dt[, year := ifelse(cycle == "cycle_0406", 2006,
+                        ifelse(cycle == "cycle_1619", 2019, 2023))]
+    return(dt)
+  }))
+  all_banks <- merge(all_banks, cpi[, .(year, asset_cutoff)], by = "year", all.x = TRUE)
+  large_banks <- unique(all_banks[bank_assets > asset_cutoff]$ID_RSSD)
+}
+
+result_tables <- list()
+
+# Panel order: Late, Mid, Early (match table image)
+cycle_order <- c("cycle_2224", "cycle_1619", "cycle_0406")
+panel_labels <- c(
+  cycle_2224 = "Panel A: Late Cycle (2022–2023)",
+  cycle_1619 = "Panel B: Mid Cycle (2016–2019)",
+  cycle_0406 = "Panel C: Early Cycle (2004–2006)"
+)
+
+old_names <- c(
+  "deposit_beta", "age", "college_frac", "dividend_frac", "family_income",
+  "sophisticated_frac", "bank_hhi", "population_density",
+  "uninsured_deposits_frac", "time_deposits_assets"
+)
+new_names <- c(
+  "Deposit beta", "Age", "College educated fraction", "Stock market participation frac",
+  "Family income (000)", "Frac. deposits in sophisticated zipcodes", "HHI",
+  "Deposit-weighted Pop. density", "Uninsured deposits frac", "Time deposit frac"
+)
+
+for (cycle_name in cycle_order) {
+  if (!cycle_name %in% names(beta_cycles)) next
+
+  dt <- copy(beta_cycles[[cycle_name]]$data)
+  dt[, large_bank := fifelse(ID_RSSD %in% large_banks, 1L, 0L)]
+  dt[, family_income := floor(family_income / 1000)]
+
+  setnames(dt, old_names, new_names)
+
+  n_large <- dt[large_bank == 1L, .N]
+  n_small <- dt[large_bank == 0L, .N]
+  cat("\n### ", panel_labels[cycle_name], "\n\n", sep = "")
+  cat("Large Banks (Obs = ", n_large, "), Small Banks (Obs = ", n_small, ")\n\n", sep = "")
+
+  temp1 <- summary_stats_function(dt[large_bank == 1L], new_names)
+  temp1 <- temp1 %>% select(-P25, -P50, -P75, -Obs)
+  temp2 <- summary_stats_function(dt[large_bank == 0L], new_names)
+  temp2 <- temp2 %>% select(-P25, -P50, -P75, -Obs)
+
+  result_tables[[paste0("bank_stats_", cycle_name)]] <- merge(temp1, temp2, by = "Variable")
+
+  md_table(result_tables[[paste0("bank_stats_", cycle_name)]])
+  cat("\n\n")
+}
+```
+
+
 # Deposit Beta Regressions
 
 Table showing how depositor characteristics predict deposit beta sensitivity:
