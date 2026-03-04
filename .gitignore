@@ -1,6 +1,8 @@
 related-papers/
 archives/
 archives/**
+referee-reports/
+referee-reports/**
 
 # LaTeX compilation files
 paper_Jan2026.pdf
