@@ -150,12 +150,12 @@ panel_labels <- c(
 old_names <- c(
   "deposit_beta", "age", "college_frac", "dividend_frac", "family_income",
   "sophisticated_frac", "bank_hhi", "population_density",
-  "uninsured_deposits_frac", "time_deposits_assets"
+  "uninsured_deposits_frac", "time_deposits_assets","trans_accts_frac_assets"
 )
 new_names <- c(
   "Deposit beta", "Age", "College educated fraction", "Stock market participation frac",
   "Family income (000)", "Frac. deposits in sophisticated zipcodes", "HHI",
-  "Deposit-weighted Pop. density", "Uninsured deposits frac", "Time deposit frac"
+  "Deposit-weighted Pop. density", "Uninsured deposits frac", "Time deposit frac","Transaction deposit frac"
 )
 
 for (cycle_name in cycle_order) {

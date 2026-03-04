@@ -14,7 +14,7 @@ Summary statistics for the branch closure analysis sample, by bank size and rate
 
 ## Bank-Level Characteristics by Size and Cycle
 
-Descriptive statistics for banks by size (large vs small, CPI-adjusted asset cutoff $100M) and rate cycle (Early 2004–2006, Mid 2016–2019, Late 2022–2024). Variables: Deposit beta, Age, College frac, Stock market frac, Family income, Sophisticated frac, HHI, Pop. density. Source: `code/analysis/desc_stats_closure_sample_02202026.qmd` (tbl-bank-stats).
+Descriptive statistics for banks by size (large vs small, CPI-adjusted asset cutoff $100M) and rate cycle (Early 2004–2006, Mid 2016–2019, Late 2022–2023). Variables: Deposit beta, Age, College frac, Stock market frac, Family income, Sophisticated frac, HHI, Pop. density. Source: `code/analysis/key_closure_results.qmd` (tbl-bank-desc-stats).
 
 ```
 ### Panel A: Late Cycle (2022–2023)
@@ -32,6 +32,7 @@ Large Banks (Obs = 31), Small Banks (Obs = 4499)
 |HHI                                     | 0.25 | 0.16| 0.14|  0.36| 0.23 | 0.13| 0.11| 0.39|
 |Stock market participation frac         | 0.28 | 0.14| 0.15|  0.45| 0.20 | 0.09| 0.10| 0.30|
 |Time deposit frac                       | 0.11 | 0.10| 0.03|  0.21| 0.25 | 0.13| 0.10| 0.43|
+|Transaction deposit frac                | 0.05 | 0.04| 0.01|  0.10| 0.12 | 0.09| 0.02| 0.24|
 |Uninsured deposits frac                 | 0.53 | 0.21| 0.20|  0.76| 0.35 | 0.15| 0.18| 0.54|
 
 
@@ -51,6 +52,7 @@ Large Banks (Obs = 34), Small Banks (Obs = 5008)
 |HHI                                     | 0.25 | 0.15| 0.14|  0.35| 0.23 | 0.13| 0.11| 0.38|
 |Stock market participation frac         | 0.27 | 0.14| 0.13|  0.43| 0.20 | 0.09| 0.10| 0.30|
 |Time deposit frac                       | 0.11 | 0.10| 0.03|  0.20| 0.25 | 0.13| 0.10| 0.43|
+|Transaction deposit frac                | 0.05 | 0.04| 0.01|  0.09| 0.12 | 0.09| 0.02| 0.24|
 |Uninsured deposits frac                 | 0.52 | 0.20| 0.22|  0.75| 0.35 | 0.15| 0.18| 0.54|
 
 
@@ -70,6 +72,7 @@ Large Banks (Obs = 27), Small Banks (Obs = 5662)
 |HHI                                     | 0.25 | 0.17| 0.15| 0.36| 0.22 | 0.12| 0.10| 0.38|
 |Stock market participation frac         | 0.25 | 0.07| 0.19| 0.33| 0.20 | 0.08| 0.10| 0.29|
 |Time deposit frac                       | 0.09 | 0.05| 0.03| 0.16| 0.31 | 0.12| 0.17| 0.47|
+|Transaction deposit frac                | 0.02 | 0.03| 0.00| 0.05| 0.11 | 0.08| 0.02| 0.21|
 |Uninsured deposits frac                 | 0.57 | 0.17| 0.39| 0.77| 0.27 | 0.13| 0.13| 0.45|
 ```
 
